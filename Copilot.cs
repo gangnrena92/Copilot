@@ -14,7 +14,6 @@ using ExileCore2.PoEMemory.MemoryObjects;
 using ExileCore2.Shared.Enums;
 
 //TODO: setting for focus on picking or following (task method??)
-// TODO: when there is an "ARENA" and the bot can't go inside cause of that
 
 namespace Copilot
 {
@@ -189,17 +188,18 @@ namespace Copilot
                     Keyboard.KeyUp(Keys.Space);
                 }
 
-                // check if the distance of the target changed significantly from the last position
-                if (distanceToTarget > 4000) {
-                    var portal = GetBestPortalLabel();
-                    if(portal != null) {
-                        var screenPos = GameController.IngameState.Camera.WorldToScreen(portal.ItemOnGround.Pos);
-                        var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
-                        Mouse.LeftClick(screenPoint);
-                        _nextAllowedActionTime = DateTime.Now.AddMilliseconds(500);
-                        return;
-                    }
-                } else if (distanceToTarget > Settings.BlinkRange.Value) {
+                // check if there is areatransition in the area and boss
+                var thereIsBossNear = GameController.Entities.Any(e => e.Type == EntityType.Monster && e.IsAlive && e.Rarity == MonsterRarity.Unique && Vector3.Distance(myPos, e.Pos) < 2000);
+
+                // check if the distance of the target changed significantly from the last position OR if there is a boss near and the distance is less than 2000
+                if (distanceToTarget > 4000 || (thereIsBossNear && distanceToTarget < 2000))
+                {
+                    ClickBestPortal();
+                    _nextAllowedActionTime = DateTime.Now.AddMilliseconds(500);
+                    return;
+                }
+                else if (distanceToTarget > Settings.BlinkRange.Value)
+                {
                     // use blink if the distance is too far
                     if (Settings.UseBlink.Value && DateTime.Now > _nextAllowedBlinkTime)
                     {
@@ -293,6 +293,23 @@ namespace Copilot
             {
                 return null;
             }
+        }
+
+        private void ClickBestPortal()
+        {
+            try
+            {
+                var portal = GetBestPortalLabel();
+                if (portal != null)
+                {
+                    var screenPos = GameController.IngameState.Camera.WorldToScreen(portal.ItemOnGround.Pos);
+                    var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
+                    Mouse.SetCursorPosition(screenPoint);
+                    Thread.Sleep(300);
+                    Mouse.LeftClick(screenPoint);
+                }
+            }
+            catch (Exception) { /* Handle exceptions silently */ }
         }
 
         private Point GetTpButton(PartyElementWindow leaderPE)
