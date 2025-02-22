@@ -23,5 +23,8 @@ The default settings were made to fit **MY** needs and may not work for you. So,
 - If you are going to fast it is your fault the bot is not working, not the plugin's fault
 - It's nice to have the bot zoomed out with, [WheresMyZoomAt](https://github.com/doubleespressobro/WheresMyZoomAt-PoE2) plugin
 
+## Known bugs
+- After going to "Venom Crypts" the bot will just stand (will still TP to you with the icon)... FIX: [create new instance or go to another instance](https://steelseries.com/pt-pt/blog/path-of-exile-2-how-to-reset-instance-1218).
+
 ## Donations
 [![Donate with PayPal](./assets/donate.png)](https://www.paypal.com/donate/?hosted_button_id=NX4PVU9B2YFDU)
