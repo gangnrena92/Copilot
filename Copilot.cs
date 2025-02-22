@@ -4,15 +4,16 @@ using System.Drawing;
 using System.Numerics;
 using System.Threading;
 using System.Windows.Forms;
+using ImGuiNET;
 
 using ExileCore2;
 using ExileCore2.PoEMemory;
 using ExileCore2.PoEMemory.Elements;
 using ExileCore2.PoEMemory.Components;
 using ExileCore2.PoEMemory.MemoryObjects;
+using ExileCore2.Shared.Enums;
 
 //TODO: setting for focus on picking or following (task method??)
-//TODO: sometimes when changing world it just gets stuck (not sure if it's fixed)
 
 namespace Copilot
 {
@@ -31,6 +32,31 @@ namespace Copilot
             return base.Initialise();
         }
 
+        public override void DrawSettings()
+        {
+            LogMessage("Drawing settings");
+            try {
+                if (ImGui.Button("Get Party List")) GetPartyList();
+
+                ImGui.SameLine();
+                ImGui.TextDisabled("(?)");
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip("Get the list of party members");
+
+                // draw the party list
+                ImGui.Text("Party List:");
+                var i = 0;
+                foreach (var playerName in Settings.PartyElements) {
+                    if (string.IsNullOrEmpty(playerName)) continue;
+                    i++;
+                    if (ImGui.Button("Set " + playerName + " as target"))
+                        Settings.TargetPlayerName.Value = playerName;
+                }
+                if (i == 0) ImGui.Text("No party members found");
+            }
+            catch (Exception) { /* Handle exceptions silently */ }
+            base.DrawSettings();
+        }
+
         public override void Render()
         {
             if (!GameController.Window.IsForeground()) return;
@@ -39,7 +65,7 @@ namespace Copilot
             if (Settings.TogglePauseHotkey.PressedOnce()) Settings.IsPaused.Value = !Settings.IsPaused.Value;
 
             // If paused, disabled, or not ready for the next action, do nothing
-            if (!Settings.Enable.Value || Settings.IsPaused.Value || DateTime.Now < _nextAllowedActionTime || GameController.Player == null || !GameController.Player.IsAlive || GameController.IsLoading) return;
+            if (!Settings.Enable.Value || Settings.IsPaused.Value || DateTime.Now < _nextAllowedActionTime || GameController.Player == null || GameController.IsLoading) return;
 
             try
             {
@@ -60,6 +86,21 @@ namespace Copilot
                     Keyboard.KeyDown(Keys.Space);
                     Keyboard.KeyUp(Keys.Space);
                     _nextAllowedActionTime = DateTime.Now.AddMilliseconds(Settings.ActionCooldown.Value);
+                    return;
+                }
+
+                var resurrectPanel = GameController.IngameState.IngameUi.ResurrectPanel;
+                if (resurrectPanel != null && resurrectPanel.IsVisible) {
+                    var inTown = resurrectPanel?.ResurrectInTown;
+                    var atCheckpoint = resurrectPanel?.ResurrectAtCheckpoint;
+                    var btn = atCheckpoint ?? inTown; // if inTown is null, use atCheckpoint
+                    if (btn != null && btn.IsVisible) {
+                        var screenPoint = new Point((int)btn.GetClientRectCache.Center.X, (int)btn.GetClientRectCache.Center.Y);
+                        Mouse.SetCursorPosition(screenPoint);
+                        Thread.Sleep(300);
+                        Mouse.LeftClick(screenPoint);
+                    }
+                    _nextAllowedActionTime = DateTime.Now.AddMilliseconds(1000);
                     return;
                 }
 
@@ -84,6 +125,7 @@ namespace Copilot
                 _followTarget = GetFollowingTarget();
                 var leaderPE = GetLeaderPartyElement();
                 var myPos = GameController.Player.Pos;
+                var isInTown = GameController.Area.CurrentArea.IsTown;
 
                 if (_followTarget == null && !leaderPE.ZoneName.Equals(GameController?.Area?.CurrentArea?.DisplayName)) {
                     // distance between lastTarget and myPost, int rounded
@@ -94,9 +136,8 @@ namespace Copilot
                         return;
                     }
 
-                    var portal = GetBestPortalLabel(leaderPE);
+                    var portal = GetBestPortalLabel();
                     var distanceToPortal = portal != null ? Vector3.Distance(myPos, portal.ItemOnGround.Pos) : 501;
-                    var isInTown = GameController.Area.CurrentArea.IsTown;
 
                     if (!isInTown && distanceToPortal <= 500) {
                         var screenPos = GameController.IngameState.Camera.WorldToScreen(portal.ItemOnGround.Pos);
@@ -132,7 +173,7 @@ namespace Copilot
                 }
 
                 // Check distance to target
-                if (_followTarget == null) return;
+                if (_followTarget == null || isInTown) return;
                 var targetPos = _followTarget.Pos;
                 if (lastTargetPosition == Vector3.Zero) lastTargetPosition = targetPos;
                 var distanceToTarget = Vector3.Distance(myPos, targetPos);
@@ -149,7 +190,7 @@ namespace Copilot
 
                 // check if the distance of the target changed significantly from the last position
                 if (distanceToTarget > 4000) {
-                    var portal = GetBestPortalLabel(leaderPE);
+                    var portal = GetBestPortalLabel();
                     if(portal != null) {
                         var screenPos = GameController.IngameState.Camera.WorldToScreen(portal.ItemOnGround.Pos);
                         var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
@@ -182,7 +223,7 @@ namespace Copilot
             {
                 var leaderName = Settings.TargetPlayerName.Value.ToLower();
                 return GameController.Entities
-                    .Where(e => e.Type == ExileCore2.Shared.Enums.EntityType.Player)
+                    .Where(e => e.Type == EntityType.Player)
                     .FirstOrDefault(e => e.GetComponent<Player>().PlayerName.ToLower() == leaderName);
             }
             catch (Exception)
@@ -212,12 +253,31 @@ namespace Copilot
             }
         }
 
-        private LabelOnGround GetBestPortalLabel(PartyElementWindow leaderPE)
+        private void GetPartyList()
+        {
+            // Settings
+            var partyElements = new string[5];
+            try
+            {
+                var partyElementList = GameController?.IngameState?.IngameUi?.PartyElement.Children?[0]?.Children;
+                var i = 0;
+                foreach (var partyElement in partyElementList)
+                {
+                    var playerName = partyElement?.Children?[0]?.Children?[0]?.Text;
+                    partyElements[i] = playerName;
+                    i++;
+                }
+            }
+            catch (Exception) { /* Handle exceptions silently */ }
+
+            Settings.PartyElements = partyElements;
+        }
+
+        private LabelOnGround GetBestPortalLabel()
         {
             try
             {
                 var currentZoneName = GameController.Area.CurrentArea.DisplayName;
-                // if (leaderPE.ZoneName.Equals(currentZoneName)) return null;
                 var portalLabels =
                     GameController?.Game?.IngameState?.IngameUi?.ItemsOnGroundLabelsVisible?.Where(x => x.ItemOnGround.Metadata.ToLower().Contains("areatransition") || x.ItemOnGround.Metadata.ToLower().Contains("portal"))
                         .OrderBy(x => Vector3.Distance(lastTargetPosition, x.ItemOnGround.Pos)).ToList();
