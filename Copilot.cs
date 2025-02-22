@@ -12,8 +12,7 @@ using ExileCore2.PoEMemory.Components;
 using ExileCore2.PoEMemory.MemoryObjects;
 
 //TODO: setting for focus on picking or following (task method??)
-//TODO: sometimes when changing world it just gets stuck
-//TODO: if im on a city and can't follow the leader, it should tp to the leader instead of going to the portal
+//TODO: sometimes when changing world it just gets stuck (not sure if it's fixed)
 
 namespace Copilot
 {
@@ -64,7 +63,7 @@ namespace Copilot
                     return;
                 }
 
-                // TODO: handle picking up items
+                // TODO: handle picking up items??
 
                 FollowTarget();
             } 
