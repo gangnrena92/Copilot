@@ -22,6 +22,7 @@ The default settings were made to fit **MY** needs and may not work for you. So,
 - When the target goes through a portal, the target should wait, near, so when the bot loads he can see the target in his screen
 - If you are going to fast it is your fault the bot is not working, not the plugin's fault
 - It's nice to have the bot zoomed out with, [WheresMyZoomAt](https://github.com/doubleespressobro/WheresMyZoomAt-PoE2) plugin
+- I recommend using the Waypoint and Map Device near each other
 
 ## Known bugs
 - After going to "Venom Crypts" the bot will just stand (will still TP to you with the icon)... FIX: [create new instance or go to another instance](https://steelseries.com/pt-pt/blog/path-of-exile-2-how-to-reset-instance-1218).

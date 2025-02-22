@@ -14,6 +14,7 @@ using ExileCore2.PoEMemory.MemoryObjects;
 using ExileCore2.Shared.Enums;
 
 //TODO: setting for focus on picking or following (task method??)
+// TODO: when there is an "ARENA" and the bot can't go inside cause of that
 
 namespace Copilot
 {
