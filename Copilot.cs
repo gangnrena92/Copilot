@@ -34,7 +34,6 @@ namespace Copilot
 
         public override void DrawSettings()
         {
-            LogMessage("Drawing settings");
             try {
                 if (ImGui.Button("Get Party List")) GetPartyList();
 
@@ -113,9 +112,9 @@ namespace Copilot
 
         public override void AreaChange(AreaInstance area)
         {
-            base.AreaChange(area);
             lastTargetPosition = Vector3.Zero;
             _followTarget = null;
+            base.AreaChange(area);
         }
 
         private void FollowTarget()
@@ -126,24 +125,17 @@ namespace Copilot
                 var leaderPE = GetLeaderPartyElement();
                 var myPos = GameController.Player.Pos;
                 var isInTown = GameController.Area.CurrentArea.IsTown;
+                var currentArea = GameController.Area.CurrentArea;
 
-                if (_followTarget == null && !leaderPE.ZoneName.Equals(GameController?.Area?.CurrentArea?.DisplayName)) {
-                    // distance between lastTarget and myPost, int rounded
-                    var roundedDiff = (int) Math.Round(Vector3.Distance(lastTargetPosition, myPos));
-                    if (lastTargetPosition != Vector3.Zero && roundedDiff <= 10) {
-                        MoveToward(lastTargetPosition);
-                        _nextAllowedActionTime = DateTime.Now.AddMilliseconds(1000);
-                        return;
-                    }
-
+                if (_followTarget == null && !leaderPE.ZoneName.Equals(GameController.Area.CurrentArea.DisplayName)) {
                     var portal = GetBestPortalLabel();
                     var distanceToPortal = portal != null ? Vector3.Distance(myPos, portal.ItemOnGround.Pos) : 501;
 
-                    if (!isInTown && distanceToPortal <= 500) {
+                    if (currentArea.IsHideout && distanceToPortal <= 1000) { // if in hideout and near the portal
                         var screenPos = GameController.IngameState.Camera.WorldToScreen(portal.ItemOnGround.Pos);
                         var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
                         Mouse.SetCursorPosition(screenPoint);
-                        Thread.Sleep(300);
+                        Thread.Sleep(500);
                         Mouse.LeftClick(screenPoint);
                         if (leaderPE?.TpButton != null && GetTpConfirmation() != null)
                         {
@@ -153,27 +145,28 @@ namespace Copilot
                     } else if (leaderPE?.TpButton != null) {
                         var screenPoint = GetTpButton(leaderPE);
                         Mouse.SetCursorPosition(screenPoint);
-                        Thread.Sleep(300);
+                        Thread.Sleep(100);
                         Mouse.LeftClick(screenPoint);
 
-                        if (leaderPE?.TpButton != null)
+                        if (leaderPE.TpButton != null)
                         { // check if the tp confirmation is open
                             var tpConfirmation = GetTpConfirmation();
                             if (tpConfirmation != null)
                             {
                                 screenPoint = new Point((int)tpConfirmation.GetClientRectCache.Center.X, (int)tpConfirmation.GetClientRectCache.Center.Y);
                                 Mouse.SetCursorPosition(screenPoint);
-                                Thread.Sleep(300);
+                                Thread.Sleep(100);
                                 Mouse.LeftClick(screenPoint);
                             }
                         }
                     }
-                    _nextAllowedActionTime = DateTime.Now.AddMilliseconds(1000);
+                    _nextAllowedActionTime = DateTime.Now.AddMilliseconds(500);
                     return;
                 }
 
                 // Check distance to target
                 if (_followTarget == null || isInTown) return;
+
                 var targetPos = _followTarget.Pos;
                 if (lastTargetPosition == Vector3.Zero) lastTargetPosition = targetPos;
                 var distanceToTarget = Vector3.Distance(myPos, targetPos);
@@ -192,10 +185,10 @@ namespace Copilot
                 var thereIsBossNear = GameController.Entities.Any(e => e.Type == EntityType.Monster && e.IsAlive && e.Rarity == MonsterRarity.Unique && Vector3.Distance(myPos, e.Pos) < 2000);
 
                 // check if the distance of the target changed significantly from the last position OR if there is a boss near and the distance is less than 2000
-                if (distanceToTarget > 4000 || (thereIsBossNear && distanceToTarget < 2000))
+                if (distanceToTarget > 3000 /* || (thereIsBossNear && distanceToTarget < 2000) */) // TODO: fix this arena
                 {
                     ClickBestPortal();
-                    _nextAllowedActionTime = DateTime.Now.AddMilliseconds(500);
+                    _nextAllowedActionTime = DateTime.Now.AddMilliseconds(1000);
                     return;
                 }
                 else if (distanceToTarget > Settings.BlinkRange.Value)
@@ -203,14 +196,15 @@ namespace Copilot
                     // use blink if the distance is too far
                     if (Settings.UseBlink.Value && DateTime.Now > _nextAllowedBlinkTime)
                     {
+                        MoveToward(targetPos);
                         Keyboard.KeyDown(Keys.Space);
                         Keyboard.KeyUp(Keys.Space);
-                        _nextAllowedBlinkTime = DateTime.Now.AddMilliseconds(Settings.BlinkCooldown.Value);
                     }
                 }
-
-                // If outside the follow distance, move toward the target
-                MoveToward(targetPos);
+                else
+                {
+                    MoveToward(targetPos);
+                }
 
                 // Set the cooldown for the next allowed action
                 _nextAllowedActionTime = DateTime.Now.AddMilliseconds(Settings.ActionCooldown.Value);
@@ -223,12 +217,13 @@ namespace Copilot
             try
             {
                 var leaderName = Settings.TargetPlayerName.Value.ToLower();
-                return GameController.Entities
-                    .Where(e => e.Type == EntityType.Player)
-                    .FirstOrDefault(e => e.GetComponent<Player>().PlayerName.ToLower() == leaderName);
+                var target = GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Player].FirstOrDefault(x => string.Equals(x.GetComponent<Player>()?.PlayerName.ToLower(), leaderName, StringComparison.OrdinalIgnoreCase));
+                LogMessage("Following target is: " + target);
+                return target;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                LogError(e.Message);
                 return null;
             }
         }
