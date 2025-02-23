@@ -25,7 +25,7 @@ The default settings were made to fit **MY** needs and may not work for you. So,
 - I recommend using the Waypoint and Map Device near each other
 
 ## Known bugs
-- After going to "Venom Crypts" the bot will just stand (will still TP to you with the icon)... FIX: [create new instance or go to another instance](https://steelseries.com/pt-pt/blog/path-of-exile-2-how-to-reset-instance-1218).
+- When going through the acts the bot will just stand still... FIX: [create new instance or go to another instance on the target](https://steelseries.com/pt-pt/blog/path-of-exile-2-how-to-reset-instance-1218).
 
 ## Donations
 [![Donate with PayPal](./assets/donate.png)](https://www.paypal.com/donate/?hosted_button_id=NX4PVU9B2YFDU)
