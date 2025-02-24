@@ -182,7 +182,7 @@ namespace Copilot
                 }
 
                 // check if there is areatransition in the area and boss
-                var thereIsBossNear = GameController.Entities.Any(e => e.Type == EntityType.Monster && e.IsAlive && e.Rarity == MonsterRarity.Unique && Vector3.Distance(myPos, e.Pos) < 2000);
+                // var thereIsBossNear = GameController.Entities.Any(e => e.Type == EntityType.Monster && e.IsAlive && e.Rarity == MonsterRarity.Unique && Vector3.Distance(myPos, e.Pos) < 2000);
 
                 // check if the distance of the target changed significantly from the last position OR if there is a boss near and the distance is less than 2000
                 if (distanceToTarget > 3000 /* || (thereIsBossNear && distanceToTarget < 2000) */) // TODO: fix this arena
@@ -199,6 +199,7 @@ namespace Copilot
                         MoveToward(targetPos);
                         Keyboard.KeyDown(Keys.Space);
                         Keyboard.KeyUp(Keys.Space);
+                        _nextAllowedBlinkTime = DateTime.Now.AddMilliseconds(Settings.BlinkCooldown.Value);
                     }
                 }
                 else
@@ -218,7 +219,6 @@ namespace Copilot
             {
                 var leaderName = Settings.TargetPlayerName.Value.ToLower();
                 var target = GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Player].FirstOrDefault(x => string.Equals(x.GetComponent<Player>()?.PlayerName.ToLower(), leaderName, StringComparison.OrdinalIgnoreCase));
-                LogMessage("Following target is: " + target);
                 return target;
             }
             catch (Exception e)
@@ -240,7 +240,6 @@ namespace Copilot
                     TpButton = leader?.Children?[leader.ChildCount == 4 ? 3 : 2],
                     ZoneName = leader?.Children?.Count == 4 ? leader.Children[2].Text : GameController.Area.CurrentArea.DisplayName
                 };
-                LogMessage("Leader party element: " + leaderPartyElement);
                 return leaderPartyElement;
             }
             catch (Exception)

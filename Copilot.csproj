@@ -18,7 +18,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="GameOffsets2">
-      <HintPath>$(exileCore2Package)\GameOffsets2.dll</HintPath>
+      <HintPath>..\..\..\GameOffsets2.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
