@@ -191,16 +191,12 @@ namespace Copilot
                     _nextAllowedActionTime = DateTime.Now.AddMilliseconds(1000);
                     return;
                 }
-                else if (distanceToTarget > Settings.BlinkRange.Value)
+                else if (Settings.UseBlink.Value && DateTime.Now > _nextAllowedBlinkTime && distanceToTarget > Settings.BlinkRange.Value)
                 {
-                    // use blink if the distance is too far
-                    if (Settings.UseBlink.Value && DateTime.Now > _nextAllowedBlinkTime)
-                    {
-                        MoveToward(targetPos);
-                        Keyboard.KeyDown(Keys.Space);
-                        Keyboard.KeyUp(Keys.Space);
-                        _nextAllowedBlinkTime = DateTime.Now.AddMilliseconds(Settings.BlinkCooldown.Value);
-                    }
+                    MoveToward(targetPos);
+                    Keyboard.KeyDown(Keys.Space);
+                    Keyboard.KeyUp(Keys.Space);
+                    _nextAllowedBlinkTime = DateTime.Now.AddMilliseconds(Settings.BlinkCooldown.Value);
                 }
                 else
                 {

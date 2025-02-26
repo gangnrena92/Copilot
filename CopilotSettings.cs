@@ -21,9 +21,9 @@ namespace Copilot
 
         [Menu(null, "~200 as default")]
         public RangeNode<int> IdleDistance { get; set; } = new RangeNode<int>(200, 5, 1000);
-        public HotkeyNode MovementKey { get; set; } = new HotkeyNode(Keys.T); // Default to no key set
         public HotkeyNode TogglePauseHotkey { get; set; } = new HotkeyNode(Keys.OemPeriod); // Default to Period key
         public ToggleNode IsPaused { get; set; } = new ToggleNode(false); // Default to not paused
+
         public ToggleNode UseBlink { get; set; } = new ToggleNode(false);
 
         [Menu(null, "Minimum range to attempt to TP to the target player (default is 1000)")]
@@ -31,6 +31,7 @@ namespace Copilot
 
         [Menu(null, "If it's in range it will try to TP every {cooldown}, Cooldown in milliseconds (default is 500)")]
         public RangeNode<int> BlinkCooldown { get; set; } = new RangeNode<int>(500, 100, 10000);
+
 
         public CopilotSettings()
         {
