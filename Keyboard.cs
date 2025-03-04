@@ -18,4 +18,10 @@ public static class Keyboard
     {
         keybd_event((byte)key, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
     }
+
+    public static void KeyPress(Keys key)
+    {
+        KeyDown(key);
+        KeyUp(key);
+    }
 }

@@ -19,23 +19,43 @@ namespace Copilot
         [Menu(null, "~100 as default")]
         public RangeNode<int> ActionCooldown { get; set; } = new RangeNode<int>(100, 50, 20000); // Cooldown in milliseconds
 
-        [Menu(null, "~200 as default")]
-        public RangeNode<int> IdleDistance { get; set; } = new RangeNode<int>(200, 5, 1000);
         public HotkeyNode TogglePauseHotkey { get; set; } = new HotkeyNode(Keys.OemPeriod); // Default to Period key
+
         public ToggleNode IsPaused { get; set; } = new ToggleNode(false); // Default to not paused
 
-        public ToggleNode UseBlink { get; set; } = new ToggleNode(false);
+        [Menu("Blink Settings")]
+        public BlinkSettings Blink { get; set; } = new BlinkSettings();
 
-        [Menu(null, "Minimum range to attempt to TP to the target player (default is 1000)")]
-        public RangeNode<int> BlinkRange { get; set; } = new RangeNode<int>(1000, 10, 2000);
+        [Menu("Pickup Settings")]
+        public PickupSettings Pickup { get; set; } = new PickupSettings();
+    }
 
-        [Menu(null, "If it's in range it will try to TP every {cooldown}, Cooldown in milliseconds (default is 500)")]
-        public RangeNode<int> BlinkCooldown { get; set; } = new RangeNode<int>(500, 100, 10000);
+    [Submenu(CollapsedByDefault = true)]
+    public class BlinkSettings
+    {
+        [Menu("Enable")]
+        public ToggleNode Enable { get; set; } = new ToggleNode(false);
 
+        [Menu("Range", "The minimum range required to teleport (TP) to the target player. Default: 1000.")]
+        public RangeNode<int> Range { get; set; } = new RangeNode<int>(1000, 10, 2000);
 
-        public CopilotSettings()
-        {
-            Enable = new ToggleNode(true);
-        }
+        [Menu("Cooldown", "If within range, it will attempt to TP every {cooldown} milliseconds. Default: 500.")]
+        public RangeNode<int> Cooldown { get; set; } = new RangeNode<int>(500, 100, 10000);
+    }
+
+    [Submenu(CollapsedByDefault = true)]
+    public class PickupSettings
+    {
+        [Menu("Enable", "This will enable the item pickup of EVERY item that is within the range.")]
+        public ToggleNode Enable { get; set; } = new ToggleNode(false);
+
+        [Menu("Range", "The minimum range required to pick up an item. Default: 400.")]
+        public RangeNode<int> Range { get; set; } = new RangeNode<int>(400, 1, 1000);
+
+        [Menu("Item Filter", "Comma-separated list of item names to pick up. e.g. Orb,Mirror,...")]
+        public TextNode Filter { get; set; } = new TextNode("Orb,Mirror");
+
+        [Menu("Ignore if target too far", "If the target is too far away, ignore the items. Default: 1200.")]
+        public RangeNode<int> RangeToIgnore { get; set; } = new RangeNode<int>(1200, 1, 3000);
     }
 }

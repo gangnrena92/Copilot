@@ -13,8 +13,6 @@ using ExileCore2.PoEMemory.Components;
 using ExileCore2.PoEMemory.MemoryObjects;
 using ExileCore2.Shared.Enums;
 
-//TODO: setting for focus on picking or following (task method??)
-
 namespace Copilot
 {
     public class Copilot : BaseSettingsPlugin<CopilotSettings>
@@ -23,6 +21,11 @@ namespace Copilot
         private DateTime _nextAllowedActionTime = DateTime.Now; // Cooldown timer
         private DateTime _nextAllowedBlinkTime = DateTime.Now;
         private Vector3 lastTargetPosition = Vector3.Zero;
+
+        private IngameUIElements IngameUi => GameController.IngameState.IngameUi;
+        private Element UIRoot => GameController.IngameState.UIRoot;
+        private Camera Camera => GameController.Game.IngameState.Camera;
+        private AreaInstance CurrentArea => GameController.Area.CurrentArea;
 
         public override bool Initialise()
         {
@@ -56,6 +59,13 @@ namespace Copilot
             base.DrawSettings();
         }
 
+        public override void AreaChange(AreaInstance area)
+        {
+            lastTargetPosition = Vector3.Zero;
+            _followTarget = null;
+            base.AreaChange(area);
+        }
+
         public override void Render()
         {
             if (!GameController.Window.IsForeground()) return;
@@ -69,26 +79,25 @@ namespace Copilot
             try
             {
                 // Check if there are any UI elements blocking the player
-                var checkpoint = GameController.IngameState.UIRoot?.Children?[1]?.Children?[64];
-                var market = GameController.IngameState.UIRoot?.Children?[1]?.Children?[27];
-                var leftPanel = GameController.IngameState.IngameUi.OpenLeftPanel;
-                var rightPanel = GameController.IngameState.IngameUi.OpenRightPanel;
-                var worldMap = GameController.IngameState.IngameUi.WorldMap;
-                var npcDialog = GameController.IngameState.IngameUi.NpcDialog;
+                var checkpoint = UIRoot.Children?[1]?.Children?[64];
+                var market = UIRoot.Children?[1]?.Children?[27];
+                var leftPanel = IngameUi.OpenLeftPanel;
+                var rightPanel = IngameUi.OpenRightPanel;
+                var worldMap = IngameUi.WorldMap;
+                var npcDialog = IngameUi.NpcDialog;
                 if ((checkpoint?.IsVisible != null && (bool)checkpoint?.IsVisible) ||
                     (leftPanel?.IsVisible != null && (bool)leftPanel?.IsVisible) ||
                     (rightPanel?.IsVisible != null && (bool)rightPanel?.IsVisible) ||
                     (worldMap?.IsVisible != null && (bool)worldMap?.IsVisible) ||
                     (npcDialog?.IsVisible != null && (bool)npcDialog?.IsVisible) ||
                     (market?.IsVisible != null && (bool)market?.IsVisible))
-                {
-                    Keyboard.KeyDown(Keys.Space);
-                    Keyboard.KeyUp(Keys.Space);
+                { 
+                    Keyboard.KeyPress(Keys.Space);
                     _nextAllowedActionTime = DateTime.Now.AddMilliseconds(Settings.ActionCooldown.Value);
                     return;
                 }
 
-                var resurrectPanel = GameController.IngameState.IngameUi.ResurrectPanel;
+                var resurrectPanel = IngameUi.ResurrectPanel;
                 if (resurrectPanel != null && resurrectPanel.IsVisible) {
                     var inTown = resurrectPanel?.ResurrectInTown;
                     var atCheckpoint = resurrectPanel?.ResurrectAtCheckpoint;
@@ -103,18 +112,9 @@ namespace Copilot
                     return;
                 }
 
-                // TODO: handle picking up items??
-
                 FollowTarget();
             } 
             catch (Exception) { /* Handle exceptions silently */ }
-        }
-
-        public override void AreaChange(AreaInstance area)
-        {
-            lastTargetPosition = Vector3.Zero;
-            _followTarget = null;
-            base.AreaChange(area);
         }
 
         private void FollowTarget()
@@ -124,62 +124,50 @@ namespace Copilot
                 _followTarget = GetFollowingTarget();
                 var leaderPE = GetLeaderPartyElement();
                 var myPos = GameController.Player.Pos;
-                var isInTown = GameController.Area.CurrentArea.IsTown;
-                var currentArea = GameController.Area.CurrentArea;
 
-                if (_followTarget == null && !leaderPE.ZoneName.Equals(GameController.Area.CurrentArea.DisplayName)) {
-                    var portal = GetBestPortalLabel();
-                    var distanceToPortal = portal != null ? Vector3.Distance(myPos, portal.ItemOnGround.Pos) : 501;
-
-                    if (currentArea.IsHideout && distanceToPortal <= 1000) { // if in hideout and near the portal
-                        var screenPos = GameController.IngameState.Camera.WorldToScreen(portal.ItemOnGround.Pos);
-                        var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
-                        Mouse.SetCursorPosition(screenPoint);
-                        Thread.Sleep(500);
-                        Mouse.LeftClick(screenPoint);
-                        if (leaderPE?.TpButton != null && GetTpConfirmation() != null)
-                        {
-                            Keyboard.KeyDown(Keys.Space);
-                            Keyboard.KeyUp(Keys.Space);
-                        }
-                    } else if (leaderPE?.TpButton != null) {
-                        var screenPoint = GetTpButton(leaderPE);
-                        Mouse.SetCursorPosition(screenPoint);
-                        Thread.Sleep(100);
-                        Mouse.LeftClick(screenPoint);
-
-                        if (leaderPE.TpButton != null)
-                        { // check if the tp confirmation is open
-                            var tpConfirmation = GetTpConfirmation();
-                            if (tpConfirmation != null)
-                            {
-                                screenPoint = new Point((int)tpConfirmation.GetClientRectCache.Center.X, (int)tpConfirmation.GetClientRectCache.Center.Y);
-                                Mouse.SetCursorPosition(screenPoint);
-                                Thread.Sleep(100);
-                                Mouse.LeftClick(screenPoint);
-                            }
-                        }
-                    }
-                    _nextAllowedActionTime = DateTime.Now.AddMilliseconds(500);
+                // If the target is not found, or the player is not in the same zone
+                if (_followTarget == null) {
+                    if (!leaderPE.ZoneName.Equals(CurrentArea.DisplayName))
+                        FollowUsingPortalOrTpButton(myPos, leaderPE);
                     return;
                 }
-
-                // Check distance to target
-                if (_followTarget == null || isInTown) return;
+                if (CurrentArea.IsTown) return;
 
                 var targetPos = _followTarget.Pos;
                 if (lastTargetPosition == Vector3.Zero) lastTargetPosition = targetPos;
                 var distanceToTarget = Vector3.Distance(myPos, targetPos);
 
-                // If within the follow distance, skip actions
-                if (distanceToTarget <= Settings.FollowDistance.Value || distanceToTarget <= Settings.IdleDistance.Value) return;
-
-                // check if is possible to move to the target but the tp confirmation is open
-                if (leaderPE?.TpButton != null && GetTpConfirmation() != null)
+                // Check for items on the ground
+                if (Settings.Pickup.Enable.Value && distanceToTarget <= Settings.Pickup.RangeToIgnore.Value)
                 {
-                    Keyboard.KeyDown(Keys.Space);
-                    Keyboard.KeyUp(Keys.Space);
+                    var items = IngameUi.ItemsOnGroundLabelsVisible;
+                    if (items != null)
+                    {
+                        var filteredItems = Settings.Pickup.Filter.Value.Split(',');
+                        var item = items?
+                            .OrderBy(x => Vector3.Distance(myPos, x.ItemOnGround.Pos))
+                            .FirstOrDefault(x => filteredItems.Any(y => x.Label.Text != null && x.Label.Text.Contains(y)));
+                        if (item != null)
+                        {
+                            var distanceToItem = Vector3.Distance(myPos, item.ItemOnGround.Pos);
+                            if (distanceToItem <= Settings.Pickup.Range.Value)
+                            {
+                                var screenPos = Camera.WorldToScreen(item.ItemOnGround.Pos);
+                                var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
+                                Mouse.SetCursorPosition(screenPoint);
+                                Mouse.LeftClick(screenPoint);
+                                _nextAllowedActionTime = DateTime.Now.AddMilliseconds(Settings.ActionCooldown.Value);
+                                return;
+                            }
+                        }
+                    }
                 }
+
+                // If within the follow distance, do nothing
+                if (distanceToTarget <= Settings.FollowDistance.Value) return;
+
+                // Quick check for "bugged" (shouldn't be open) confirmation tp
+                if (leaderPE?.TpButton != null && GetTpConfirmation() != null) Keyboard.KeyPress(Keys.Escape);
 
                 // check if there is areatransition in the area and boss
                 // var thereIsBossNear = GameController.Entities.Any(e => e.Type == EntityType.Monster && e.IsAlive && e.Rarity == MonsterRarity.Unique && Vector3.Distance(myPos, e.Pos) < 2000);
@@ -191,12 +179,12 @@ namespace Copilot
                     _nextAllowedActionTime = DateTime.Now.AddMilliseconds(1000);
                     return;
                 }
-                else if (Settings.UseBlink.Value && DateTime.Now > _nextAllowedBlinkTime && distanceToTarget > Settings.BlinkRange.Value)
+                else if (Settings.Blink.Enable.Value && DateTime.Now > _nextAllowedBlinkTime && distanceToTarget > Settings.Blink.Range.Value)
                 {
                     MoveToward(targetPos);
-                    Keyboard.KeyDown(Keys.Space);
-                    Keyboard.KeyUp(Keys.Space);
-                    _nextAllowedBlinkTime = DateTime.Now.AddMilliseconds(Settings.BlinkCooldown.Value);
+                    Thread.Sleep(50);
+                    Keyboard.KeyPress(Keys.Space);
+                    _nextAllowedBlinkTime = DateTime.Now.AddMilliseconds(Settings.Blink.Cooldown.Value);
                 }
                 else
                 {
@@ -205,6 +193,46 @@ namespace Copilot
 
                 // Set the cooldown for the next allowed action
                 _nextAllowedActionTime = DateTime.Now.AddMilliseconds(Settings.ActionCooldown.Value);
+            }
+            catch (Exception) { /* Handle exceptions silently */ }
+        }
+
+        private void FollowUsingPortalOrTpButton(Vector3 myPos, PartyElementWindow leaderPE)
+        {
+            try
+            {
+                var portal = GetBestPortalLabel();
+                const int threshold = 1000;
+                var distanceToPortal = portal != null ? Vector3.Distance(myPos, portal.ItemOnGround.Pos) : threshold + 1;
+                if (CurrentArea.IsHideout && distanceToPortal <= threshold)
+                { // if in hideout and near the portal
+                    var screenPos = Camera.WorldToScreen(portal.ItemOnGround.Pos);
+                    var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
+                    Mouse.SetCursorPosition(screenPoint);
+                    Thread.Sleep(500);
+                    Mouse.LeftClick(screenPoint);
+                    if (leaderPE?.TpButton != null && GetTpConfirmation() != null) Keyboard.KeyPress(Keys.Escape);
+                }
+                else if (leaderPE?.TpButton != null)
+                {
+                    var screenPoint = GetTpButton(leaderPE);
+                    Mouse.SetCursorPosition(screenPoint);
+                    Thread.Sleep(100);
+                    Mouse.LeftClick(screenPoint);
+
+                    if (leaderPE.TpButton != null)
+                    { // check if the tp confirmation is open
+                        var tpConfirmation = GetTpConfirmation();
+                        if (tpConfirmation != null)
+                        {
+                            screenPoint = new Point((int)tpConfirmation.GetClientRectCache.Center.X, (int)tpConfirmation.GetClientRectCache.Center.Y);
+                            Mouse.SetCursorPosition(screenPoint);
+                            Thread.Sleep(100);
+                            Mouse.LeftClick(screenPoint);
+                        }
+                    }
+                }
+                _nextAllowedActionTime = DateTime.Now.AddMilliseconds(500);
             }
             catch (Exception) { /* Handle exceptions silently */ }
         }
@@ -228,13 +256,13 @@ namespace Copilot
         {
             try
             {
-                var partyElementList = GameController?.IngameState?.IngameUi?.PartyElement.Children?[0]?.Children;
+                var partyElementList = IngameUi.PartyElement.Children?[0]?.Children;
                 var leader = partyElementList?.FirstOrDefault(partyElement => partyElement?.Children?[0]?.Children?[0]?.Text?.ToLower() == Settings.TargetPlayerName.Value.ToLower());
                 var leaderPartyElement = new PartyElementWindow
                 {
                     PlayerName = leader.Children?[0]?.Children?[0]?.Text,
                     TpButton = leader?.Children?[leader.ChildCount == 4 ? 3 : 2],
-                    ZoneName = leader?.Children?.Count == 4 ? leader.Children[2].Text : GameController.Area.CurrentArea.DisplayName
+                    ZoneName = leader?.Children?.Count == 4 ? leader.Children[2].Text : CurrentArea.DisplayName
                 };
                 return leaderPartyElement;
             }
@@ -250,7 +278,7 @@ namespace Copilot
             var partyElements = new string[5];
             try
             {
-                var partyElementList = GameController?.IngameState?.IngameUi?.PartyElement.Children?[0]?.Children;
+                var partyElementList = IngameUi.PartyElement.Children?[0]?.Children;
                 var i = 0;
                 foreach (var partyElement in partyElementList)
                 {
@@ -268,14 +296,13 @@ namespace Copilot
         {
             try
             {
-                var currentZoneName = GameController.Area.CurrentArea.DisplayName;
                 var portalLabels =
-                    GameController?.Game?.IngameState?.IngameUi?.ItemsOnGroundLabelsVisible?.Where(x => x.ItemOnGround.Metadata.ToLower().Contains("areatransition") || x.ItemOnGround.Metadata.ToLower().Contains("portal"))
+                    IngameUi.ItemsOnGroundLabelsVisible?.Where(x => x.ItemOnGround.Metadata.ToLower().Contains("areatransition") || x.ItemOnGround.Metadata.ToLower().Contains("portal"))
                         .OrderBy(x => Vector3.Distance(lastTargetPosition, x.ItemOnGround.Pos)).ToList();
 
                 var random = new Random();
 
-                return GameController?.Area?.CurrentArea?.IsHideout != null && (bool) GameController?.Area?.CurrentArea?.IsHideout
+                return CurrentArea?.IsHideout != null && CurrentArea.IsHideout
                     ? portalLabels?[random.Next(portalLabels.Count)]
                     : portalLabels?.FirstOrDefault();
             }
@@ -292,7 +319,7 @@ namespace Copilot
                 var portal = GetBestPortalLabel();
                 if (portal != null)
                 {
-                    var screenPos = GameController.IngameState.Camera.WorldToScreen(portal.ItemOnGround.Pos);
+                    var screenPos = Camera.WorldToScreen(portal.ItemOnGround.Pos);
                     var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
                     Mouse.SetCursorPosition(screenPoint);
                     Thread.Sleep(300);
@@ -322,7 +349,7 @@ namespace Copilot
         {
             try
             {
-                var ui = GameController?.IngameState?.IngameUi?.PopUpWindow.Children[0].Children[0];
+                var ui = IngameUi.PopUpWindow.Children[0].Children[0];
 
                 if (ui.Children[0].Text.Equals("Are you sure you want to teleport to this player's location?"))
                     return ui.Children[3].Children[0];
@@ -339,10 +366,11 @@ namespace Copilot
         {
             try
             {
-                var screenPos = GameController.IngameState.Camera.WorldToScreen(targetPos);
+                var screenPos = Camera.WorldToScreen(targetPos);
                 var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
 
                 Mouse.SetCursorPosition(screenPoint);
+                Thread.Sleep(20);
                 Mouse.LeftClick(screenPoint);
                 lastTargetPosition = targetPos;
             }
