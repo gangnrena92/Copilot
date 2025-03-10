@@ -430,7 +430,7 @@ namespace Copilot
                 Mouse.SetCursorPosition(screenPoint);
                 Thread.Sleep(20);
                 if (Settings.Additional.UseMouse.Value)
-                    Mouse.RightClick(screenPoint);
+                    Mouse.LeftClick(screenPoint);
                 else
                     Keyboard.KeyPress(Keys.T);
                 lastTargetPosition = targetPos;
