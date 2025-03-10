@@ -21,13 +21,31 @@ namespace Copilot
 
         public HotkeyNode TogglePauseHotkey { get; set; } = new HotkeyNode(Keys.OemPeriod); // Default to Period key
 
+        [Menu("Disabled")]
         public ToggleNode IsPaused { get; set; } = new ToggleNode(false); // Default to not paused
+
+
+        [Menu("Additional Settings")]
+        public AdditionalSettings Additional { get; set; } = new AdditionalSettings();
 
         [Menu("Blink Settings")]
         public BlinkSettings Blink { get; set; } = new BlinkSettings();
 
         [Menu("Pickup Settings")]
         public PickupSettings Pickup { get; set; } = new PickupSettings();
+
+        [Menu("Shock Bot Settings")]
+        public ShockBotSettings ShockBot { get; set; } = new ShockBotSettings();
+    }
+
+    [Submenu(CollapsedByDefault = true)]
+    public class AdditionalSettings
+    {
+        [Menu("Use Mouse to Follow")]
+        public ToggleNode UseMouse { get; set; } = new ToggleNode(true);
+
+        [Menu("Follow with key")]
+        public HotkeyNode FollowKey { get; set; } = new HotkeyNode(Keys.T);
     }
 
     [Submenu(CollapsedByDefault = true)]
@@ -57,5 +75,27 @@ namespace Copilot
 
         [Menu("Ignore if target too far", "If the target is too far away, ignore the items. Default: 1200.")]
         public RangeNode<int> RangeToIgnore { get; set; } = new RangeNode<int>(1200, 1, 3000);
+    }
+
+    [Submenu(CollapsedByDefault = true)]
+    public class ShockBotSettings
+    {
+        [Menu("Enable", "This will enable the Shock Bot.")]
+        public ToggleNode Enable { get; set; } = new ToggleNode(false);
+
+        [Menu(null, "~1000 as default")]
+        public RangeNode<int> ActionCooldown { get; set; } = new RangeNode<int>(1000, 50, 2000); // Cooldown in milliseconds
+
+        [Menu("Monster Range to Shock", "The minimum range required to shock a monster. Default: 1000.")]
+        public RangeNode<int> Range { get; set; } = new RangeNode<int>(1000, 1, 2000);
+
+        [Menu("Ball Lightning Key", "The key to use for Ball Lightning. Default: Q.")]
+        public HotkeyNode BallLightningKey { get; set; } = new HotkeyNode(Keys.Q);
+
+        [Menu("Lightning Warp Key", "The key to use for Lightning Warp. Default: W.")]
+        public HotkeyNode LightningWarpKey { get; set; } = new HotkeyNode(Keys.W);
+
+        [Menu("Range of the ball to the boss use Lightning Warp", "The range to use Lightning Warp. Default: 600.")]
+        public RangeNode<int> RangeToUseLightningWarp { get; set; } = new RangeNode<int>(600, 1, 1000);
     }
 }

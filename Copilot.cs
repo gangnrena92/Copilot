@@ -12,6 +12,10 @@ using ExileCore2.PoEMemory.Elements;
 using ExileCore2.PoEMemory.Components;
 using ExileCore2.PoEMemory.MemoryObjects;
 using ExileCore2.Shared.Enums;
+using System.Collections.Generic;
+
+// TODO: ghost follow
+// TODO: set key to follow
 
 namespace Copilot
 {
@@ -20,12 +24,14 @@ namespace Copilot
         private Entity _followTarget;
         private DateTime _nextAllowedActionTime = DateTime.Now; // Cooldown timer
         private DateTime _nextAllowedBlinkTime = DateTime.Now;
+        private DateTime _nextAllowedShockTime = DateTime.Now;
         private Vector3 lastTargetPosition = Vector3.Zero;
 
         private IngameUIElements IngameUi => GameController.IngameState.IngameUi;
         private Element UIRoot => GameController.IngameState.UIRoot;
         private Camera Camera => GameController.Game.IngameState.Camera;
         private AreaInstance CurrentArea => GameController.Area.CurrentArea;
+        private List<Entity> EntityList => GameController.EntityListWrapper.OnlyValidEntities;
 
         public override bool Initialise()
         {
@@ -49,6 +55,7 @@ namespace Copilot
                 var i = 0;
                 foreach (var playerName in Settings.PartyElements) {
                     if (string.IsNullOrEmpty(playerName)) continue;
+                    if (i > 0) ImGui.SameLine();
                     i++;
                     if (ImGui.Button("Set " + playerName + " as target"))
                         Settings.TargetPlayerName.Value = playerName;
@@ -137,31 +144,11 @@ namespace Copilot
                 if (lastTargetPosition == Vector3.Zero) lastTargetPosition = targetPos;
                 var distanceToTarget = Vector3.Distance(myPos, targetPos);
 
-                // Check for items on the ground
-                if (Settings.Pickup.Enable.Value && distanceToTarget <= Settings.Pickup.RangeToIgnore.Value)
-                {
-                    var items = IngameUi.ItemsOnGroundLabelsVisible;
-                    if (items != null)
-                    {
-                        var filteredItems = Settings.Pickup.Filter.Value.Split(',');
-                        var item = items?
-                            .OrderBy(x => Vector3.Distance(myPos, x.ItemOnGround.Pos))
-                            .FirstOrDefault(x => filteredItems.Any(y => x.Label.Text != null && x.Label.Text.Contains(y)));
-                        if (item != null)
-                        {
-                            var distanceToItem = Vector3.Distance(myPos, item.ItemOnGround.Pos);
-                            if (distanceToItem <= Settings.Pickup.Range.Value)
-                            {
-                                var screenPos = Camera.WorldToScreen(item.ItemOnGround.Pos);
-                                var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
-                                Mouse.SetCursorPosition(screenPoint);
-                                Mouse.LeftClick(screenPoint);
-                                _nextAllowedActionTime = DateTime.Now.AddMilliseconds(Settings.ActionCooldown.Value);
-                                return;
-                            }
-                        }
-                    }
-                }
+                //* Shock Bot
+                if (Settings.ShockBot.Enable.Value && DateTime.Now > _nextAllowedShockTime && ShockBotCode(myPos)) return;
+
+                //* Pickup
+                if (Settings.Pickup.Enable.Value && distanceToTarget <= Settings.Pickup.RangeToIgnore.Value && PickUpItem(myPos)) return;
 
                 // If within the follow distance, do nothing
                 if (distanceToTarget <= Settings.FollowDistance.Value) return;
@@ -235,6 +222,77 @@ namespace Copilot
                 _nextAllowedActionTime = DateTime.Now.AddMilliseconds(500);
             }
             catch (Exception) { /* Handle exceptions silently */ }
+        }
+
+        private bool ShockBotCode(Vector3 myPos)
+        {
+            var monster = EntityList
+                .Where(e => e.Type == EntityType.Monster && e.IsAlive && (e.Rarity == MonsterRarity.Rare || e.Rarity == MonsterRarity.Unique))
+                .OrderBy(e => Vector3.Distance(myPos, e.Pos))
+                .FirstOrDefault();
+            if (monster != null)
+            {
+                var distanceToMonster = Vector3.Distance(myPos, monster.Pos);
+                if (distanceToMonster <= Settings.ShockBot.Range)
+                {
+                    var screenPos = Camera.WorldToScreen(monster.Pos);
+                    var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
+                    Mouse.SetCursorPosition(screenPoint);
+                    Thread.Sleep(100);
+
+                    Keyboard.KeyPress(Settings.ShockBot.BallLightningKey.Value);
+
+                    // start tracking the balls
+                    var ball = EntityList
+                        .Where(e => e.IsDead && e.Metadata == "Metadata/Projectiles/BallLightningPlayer")
+                        .OrderBy(e => Vector3.Distance(monster.Pos, e.Pos))
+                        .FirstOrDefault();
+
+                    if (ball != null && Vector3.Distance(monster.Pos, ball.Pos) <= Settings.ShockBot.RangeToUseLightningWarp.Value)
+                    {
+                        var ballScreenPos = Camera.WorldToScreen(ball.Pos);
+                        var ballScreenPoint = new Point((int)ballScreenPos.X, (int)ballScreenPos.Y);
+                        Mouse.SetCursorPosition(ballScreenPoint);
+                        Thread.Sleep(100);
+                        Keyboard.KeyPress(Settings.ShockBot.LightningWarpKey.Value);
+                    }
+
+                    _nextAllowedActionTime = DateTime.Now.AddMilliseconds(Settings.ActionCooldown.Value);
+                    _nextAllowedShockTime = DateTime.Now.AddMilliseconds(Settings.ShockBot.ActionCooldown.Value);
+                    return true;
+                }
+            }
+            _nextAllowedShockTime = DateTime.Now.AddMilliseconds(Settings.ShockBot.ActionCooldown.Value);
+            return false;
+        }
+
+        private bool PickUpItem(Vector3 myPos)
+        {
+            try
+            {
+                var items = IngameUi.ItemsOnGroundLabelsVisible;
+                if (items != null)
+                {
+                    var filteredItems = Settings.Pickup.Filter.Value.Split(',');
+                    var item = items?
+                        .OrderBy(x => Vector3.Distance(myPos, x.ItemOnGround.Pos))
+                        .FirstOrDefault(x => filteredItems.Any(y => x.Label.Text != null && x.Label.Text.Contains(y)));
+                    if (item == null) return false;
+
+                    var distanceToItem = Vector3.Distance(myPos, item.ItemOnGround.Pos);
+                    if (distanceToItem <= Settings.Pickup.Range.Value)
+                    {
+                        var screenPos = Camera.WorldToScreen(item.ItemOnGround.Pos);
+                        var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
+                        Mouse.SetCursorPosition(screenPoint);
+                        Mouse.LeftClick(screenPoint);
+                        _nextAllowedActionTime = DateTime.Now.AddMilliseconds(Settings.ActionCooldown.Value);
+                        return true;
+                    }
+                }
+            }
+            catch (Exception) { /* Handle exceptions silently */ }
+            return false;
         }
 
         private Entity GetFollowingTarget()
@@ -371,7 +429,10 @@ namespace Copilot
 
                 Mouse.SetCursorPosition(screenPoint);
                 Thread.Sleep(20);
-                Mouse.LeftClick(screenPoint);
+                if (Settings.Additional.UseMouse.Value)
+                    Mouse.RightClick(screenPoint);
+                else
+                    Keyboard.KeyPress(Keys.T);
                 lastTargetPosition = targetPos;
             }
             catch (Exception) { /* Handle exceptions silently */ }
