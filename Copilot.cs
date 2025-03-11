@@ -111,9 +111,7 @@ namespace Copilot
                     var btn = atCheckpoint ?? inTown; // if inTown is null, use atCheckpoint
                     if (btn != null && btn.IsVisible) {
                         var screenPoint = new Point((int)btn.GetClientRectCache.Center.X, (int)btn.GetClientRectCache.Center.Y);
-                        Mouse.SetCursorPosition(screenPoint);
-                        Thread.Sleep(300);
-                        Mouse.LeftClick(screenPoint);
+                        Mouse.LeftClick(screenPoint, 300);
                     }
                     _nextAllowedActionTime = DateTime.Now.AddMilliseconds(1000);
                     return;
@@ -191,21 +189,17 @@ namespace Copilot
                 var portal = GetBestPortalLabel();
                 const int threshold = 1000;
                 var distanceToPortal = portal != null ? Vector3.Distance(myPos, portal.ItemOnGround.Pos) : threshold + 1;
-                if (CurrentArea.IsHideout && distanceToPortal <= threshold)
+                if ((CurrentArea.IsHideout || CurrentArea.Name.Equals("The Temple of Chaos")) && distanceToPortal <= threshold)
                 { // if in hideout and near the portal
                     var screenPos = Camera.WorldToScreen(portal.ItemOnGround.Pos);
                     var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
-                    Mouse.SetCursorPosition(screenPoint);
-                    Thread.Sleep(500);
-                    Mouse.LeftClick(screenPoint);
+                    Mouse.LeftClick(screenPoint, 500);
                     if (leaderPE?.TpButton != null && GetTpConfirmation() != null) Keyboard.KeyPress(Keys.Escape);
                 }
                 else if (leaderPE?.TpButton != null)
                 {
                     var screenPoint = GetTpButton(leaderPE);
-                    Mouse.SetCursorPosition(screenPoint);
-                    Thread.Sleep(100);
-                    Mouse.LeftClick(screenPoint);
+                    Mouse.LeftClick(screenPoint, 100);
 
                     if (leaderPE.TpButton != null)
                     { // check if the tp confirmation is open
@@ -213,9 +207,7 @@ namespace Copilot
                         if (tpConfirmation != null)
                         {
                             screenPoint = new Point((int)tpConfirmation.GetClientRectCache.Center.X, (int)tpConfirmation.GetClientRectCache.Center.Y);
-                            Mouse.SetCursorPosition(screenPoint);
-                            Thread.Sleep(100);
-                            Mouse.LeftClick(screenPoint);
+                            Mouse.LeftClick(screenPoint, 100);
                         }
                     }
                 }
@@ -284,8 +276,7 @@ namespace Copilot
                     {
                         var screenPos = Camera.WorldToScreen(item.ItemOnGround.Pos);
                         var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
-                        Mouse.SetCursorPosition(screenPoint);
-                        Mouse.LeftClick(screenPoint);
+                        Mouse.LeftClick(screenPoint, 50);
                         _nextAllowedActionTime = DateTime.Now.AddMilliseconds(Settings.ActionCooldown.Value);
                         return true;
                     }
@@ -355,7 +346,11 @@ namespace Copilot
             try
             {
                 var portalLabels =
-                    IngameUi.ItemsOnGroundLabelsVisible?.Where(x => x.ItemOnGround.Metadata.ToLower().Contains("areatransition") || x.ItemOnGround.Metadata.ToLower().Contains("portal"))
+                    IngameUi.ItemsOnGroundLabelsVisible?.Where(
+                            x => x.ItemOnGround.Metadata.ToLower().Contains("areatransition")
+                                || x.ItemOnGround.Metadata.ToLower().Contains("portal")
+                                || x.ItemOnGround.Metadata.ToLower().EndsWith("ultimatumentrance")
+                            )
                         .OrderBy(x => Vector3.Distance(lastTargetPosition, x.ItemOnGround.Pos)).ToList();
 
                 var random = new Random();
@@ -379,9 +374,7 @@ namespace Copilot
                 {
                     var screenPos = Camera.WorldToScreen(portal.ItemOnGround.Pos);
                     var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
-                    Mouse.SetCursorPosition(screenPoint);
-                    Thread.Sleep(300);
-                    Mouse.LeftClick(screenPoint);
+                    Mouse.LeftClick(screenPoint, 300);
                 }
             }
             catch (Exception) { /* Handle exceptions silently */ }
@@ -428,9 +421,8 @@ namespace Copilot
                 var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
 
                 Mouse.SetCursorPosition(screenPoint);
-                Thread.Sleep(20);
                 if (Settings.Additional.UseMouse.Value)
-                    Mouse.LeftClick(screenPoint);
+                    Mouse.LeftClick(screenPoint, 20);
                 else
                     Keyboard.KeyPress(Keys.T);
                 lastTargetPosition = targetPos;
