@@ -189,7 +189,10 @@ namespace Copilot
                 var portal = GetBestPortalLabel();
                 const int threshold = 1000;
                 var distanceToPortal = portal != null ? Vector3.Distance(myPos, portal.ItemOnGround.Pos) : threshold + 1;
-                if ((CurrentArea.IsHideout || CurrentArea.Name.Equals("The Temple of Chaos")) && distanceToPortal <= threshold)
+                if (
+                    (CurrentArea.IsHideout ||
+                        (CurrentArea.Name.Equals("The Temple of Chaos") && leaderPE.ZoneName.Equals("The Trial of Chaos")
+                    )) && distanceToPortal <= threshold)
                 { // if in hideout and near the portal
                     var screenPos = Camera.WorldToScreen(portal.ItemOnGround.Pos);
                     var screenPoint = new Point((int)screenPos.X, (int)screenPos.Y);
