@@ -32,6 +32,7 @@ namespace Copilot
         private Camera Camera => GameController.Game.IngameState.Camera;
         private AreaInstance CurrentArea => GameController.Area.CurrentArea;
         private List<Entity> EntityList => GameController.EntityListWrapper.OnlyValidEntities;
+        private Vector3 PlayerPos => GameController.Player.Pos;
 
         public override bool Initialise()
         {
@@ -128,25 +129,24 @@ namespace Copilot
             {
                 _followTarget = GetFollowingTarget();
                 var leaderPE = GetLeaderPartyElement();
-                var myPos = GameController.Player.Pos;
 
                 // If the target is not found, or the player is not in the same zone
                 if (_followTarget == null) {
                     if (!leaderPE.ZoneName.Equals(CurrentArea.DisplayName))
-                        FollowUsingPortalOrTpButton(myPos, leaderPE);
+                        FollowUsingPortalOrTpButton(leaderPE);
                     return;
                 }
                 if (CurrentArea.IsTown) return;
 
                 var targetPos = _followTarget.Pos;
                 if (lastTargetPosition == Vector3.Zero) lastTargetPosition = targetPos;
-                var distanceToTarget = Vector3.Distance(myPos, targetPos);
+                var distanceToTarget = Vector3.Distance(PlayerPos, targetPos);
 
                 //* Shock Bot
-                if (Settings.ShockBot.Enable.Value && DateTime.Now > _nextAllowedShockTime && ShockBotCode(myPos)) return;
+                if (Settings.ShockBot.Enable.Value && DateTime.Now > _nextAllowedShockTime && ShockBotCode()) return;
 
                 //* Pickup
-                if (Settings.Pickup.Enable.Value && distanceToTarget <= Settings.Pickup.RangeToIgnore.Value && PickUpItem(myPos)) return;
+                if (Settings.Pickup.Enable.Value && distanceToTarget <= Settings.Pickup.RangeToIgnore.Value && PickUpItem()) return;
 
                 // If within the follow distance, do nothing
                 if (distanceToTarget <= Settings.FollowDistance.Value) return;
@@ -182,13 +182,13 @@ namespace Copilot
             catch (Exception) { /* Handle exceptions silently */ }
         }
 
-        private void FollowUsingPortalOrTpButton(Vector3 myPos, PartyElementWindow leaderPE)
+        private void FollowUsingPortalOrTpButton(PartyElementWindow leaderPE)
         {
             try
             {
                 var portal = GetBestPortalLabel();
                 const int threshold = 1000;
-                var distanceToPortal = portal != null ? Vector3.Distance(myPos, portal.ItemOnGround.Pos) : threshold + 1;
+                var distanceToPortal = portal != null ? Vector3.Distance(PlayerPos, portal.ItemOnGround.Pos) : threshold + 1;
                 if (
                     (CurrentArea.IsHideout ||
                         (CurrentArea.Name.Equals("The Temple of Chaos") && leaderPE.ZoneName.Equals("The Trial of Chaos")
@@ -219,15 +219,15 @@ namespace Copilot
             catch (Exception) { /* Handle exceptions silently */ }
         }
 
-        private bool ShockBotCode(Vector3 myPos)
+        private bool ShockBotCode()
         {
             var monster = EntityList
                 .Where(e => e.Type == EntityType.Monster && e.IsAlive && (e.Rarity == MonsterRarity.Rare || e.Rarity == MonsterRarity.Unique))
-                .OrderBy(e => Vector3.Distance(myPos, e.Pos))
+                .OrderBy(e => Vector3.Distance(PlayerPos, e.Pos))
                 .FirstOrDefault();
             if (monster != null)
             {
-                var distanceToMonster = Vector3.Distance(myPos, monster.Pos);
+                var distanceToMonster = Vector3.Distance(PlayerPos, monster.Pos);
                 if (distanceToMonster <= Settings.ShockBot.Range)
                 {
                     var screenPos = Camera.WorldToScreen(monster.Pos);
@@ -261,8 +261,9 @@ namespace Copilot
             return false;
         }
 
-        private bool PickUpItem(Vector3 myPos)
+        private bool PickUpItem()
         {
+            var pos = Settings.Pickup.UseTargetPosition.Value ? _followTarget.Pos : PlayerPos;
             try
             {
                 var items = IngameUi.ItemsOnGroundLabelsVisible;
@@ -270,11 +271,11 @@ namespace Copilot
                 {
                     var filteredItems = Settings.Pickup.Filter.Value.Split(',');
                     var item = items?
-                        .OrderBy(x => Vector3.Distance(myPos, x.ItemOnGround.Pos))
+                        .OrderBy(x => Vector3.Distance(pos, x.ItemOnGround.Pos))
                         .FirstOrDefault(x => filteredItems.Any(y => x.Label.Text != null && x.Label.Text.Contains(y)));
                     if (item == null) return false;
 
-                    var distanceToItem = Vector3.Distance(myPos, item.ItemOnGround.Pos);
+                    var distanceToItem = Vector3.Distance(pos, item.ItemOnGround.Pos);
                     if (distanceToItem <= Settings.Pickup.Range.Value)
                     {
                         var screenPos = Camera.WorldToScreen(item.ItemOnGround.Pos);
