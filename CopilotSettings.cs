@@ -67,6 +67,9 @@ namespace Copilot
         [Menu("Enable", "This will enable the item pickup of EVERY item that is within the range.")]
         public ToggleNode Enable { get; set; } = new ToggleNode(false);
 
+        [Menu("Use Target's Position", "This will use the target's position to pick up items.")]
+        public ToggleNode UseTargetPosition { get; set; } = new ToggleNode(false);
+
         [Menu("Range", "The minimum range required to pick up an item. Default: 400.")]
         public RangeNode<int> Range { get; set; } = new RangeNode<int>(400, 1, 1000);
 

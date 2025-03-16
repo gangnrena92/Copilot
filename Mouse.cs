@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 public static class Mouse
 {
@@ -11,9 +12,6 @@ public static class Mouse
     private const uint MOUSEEVENTF_LEFTUP = 0x0004;
     private const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
     private const uint MOUSEEVENTF_RIGHTUP = 0x0010;
-    private const uint MOUSEEVENTF_MIDDLEDOWN = 0x0020;
-    private const uint MOUSEEVENTF_MIDDLEUP = 0x0040;
-    private const uint MOUSEEVENTF_ABSOLUTE = 0x8000;
 
     [DllImport("user32.dll")]
     private static extern bool SetCursorPos(int X, int Y);
@@ -23,9 +21,10 @@ public static class Mouse
         SetCursorPos(position.X, position.Y);
     }
 
-    public static void LeftClick(Point position)
+    public static void LeftClick(Point position, int delay = 0)
     {
         SetCursorPosition(position);
+        if (delay > 0) Thread.Sleep(delay);
         mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, (uint)position.X, (uint)position.Y, 0, 0);
     }
 
