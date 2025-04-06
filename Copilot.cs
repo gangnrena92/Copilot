@@ -15,7 +15,10 @@ using ExileCore2.Shared.Enums;
 using System.Collections.Generic;
 
 // TODO: ghost follow
-// TODO: set key to follow
+// - debug to see like a crosshair
+// TODO: circle people
+// TODO: pots
+// TODO: Threads - this will be a big one
 
 namespace Copilot
 {
@@ -314,8 +317,8 @@ namespace Copilot
                 var leaderPartyElement = new PartyElementWindow
                 {
                     PlayerName = leader.Children?[0]?.Children?[0]?.Text,
-                    TpButton = leader?.Children?[leader.ChildCount == 4 ? 3 : 2],
-                    ZoneName = leader?.Children?.Count == 4 ? leader.Children[2].Text : CurrentArea.DisplayName
+                    TpButton = leader?.Children?[4],
+                    ZoneName = leader.Children[3].Text ?? CurrentArea.DisplayName
                 };
                 return leaderPartyElement;
             }
@@ -444,6 +447,7 @@ public class PartyElementWindow
 
     public override string ToString()
     {
-        return $"{PlayerName}, current zone: {ZoneName}";
+        string not = TpButton != null ? TpButton.Text : "not ";
+        return $"{PlayerName}, current zone: {ZoneName}, and does {not}have tp button";
     }
 }
