@@ -1,13 +1,13 @@
 ﻿using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Numerics;
 
+namespace Copilot.Utils;
 public static class Mouse
 {
     [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
     private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
-
-    private const uint MOUSEEVENTF_MOVE = 0x0001;
     private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
     private const uint MOUSEEVENTF_LEFTUP = 0x0004;
     private const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
@@ -44,11 +44,5 @@ public static class Mouse
     {
         SetCursorPosition(position);
         mouse_event(MOUSEEVENTF_LEFTUP, (uint)position.X, (uint)position.Y, 0, 0);
-    }
-
-    public static void Move(Point position)
-    {
-        SetCursorPosition(position);
-        mouse_event(MOUSEEVENTF_MOVE, (uint)position.X, (uint)position.Y, 0, 0);
     }
 }

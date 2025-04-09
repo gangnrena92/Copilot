@@ -1,6 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
+namespace Copilot.Utils;
 public static class Keyboard
 {
     private const int KEYEVENTF_EXTENDEDKEY = 0x0001;
