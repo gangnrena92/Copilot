@@ -93,7 +93,6 @@ public class Copilot : BaseSettingsPlugin<CopilotSettings>
                 return;
             }
 
-            return;
             FollowTarget();
         } 
         catch (Exception) { /* Handle exceptions silently */ }
