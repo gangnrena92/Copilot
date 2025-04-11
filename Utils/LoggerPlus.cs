@@ -13,12 +13,12 @@ public class LoggerPlus
     public void Message(string message)
     {
         if (!Copilot.Settings.Additional.Debug) return;
-        Copilot.LogMessage($"[{_fileName}] {message}");
+        Copilot.LogMessage($"[{_fileName}] {message}", 5);
     }
 
     public void Error(string message)
     {
         if (!Copilot.Settings.Additional.Debug) return;
-        Copilot.LogError($"[{_fileName}] {message}");
+        Copilot.LogError($"[{_fileName}] {message}", 10);
     }
 }

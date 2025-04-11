@@ -37,6 +37,7 @@ public class Copilot : BaseSettingsPlugin<CopilotSettings>
     private Vector3 lastTargetPosition = Vector3.Zero;
 
     private Vector3 PlayerPos => GameController.Player.Pos;
+    private Vector2 WindowOffset => GameController.Window.GetWindowRectangleTimeCache.TopLeft;
 
     public override bool Initialise()
     {
@@ -93,6 +94,7 @@ public class Copilot : BaseSettingsPlugin<CopilotSettings>
                 return;
             }
 
+            // return;
             FollowTarget();
         } 
         catch (Exception) { /* Handle exceptions silently */ }
@@ -196,7 +198,6 @@ public class Copilot : BaseSettingsPlugin<CopilotSettings>
         catch (Exception) { /* Handle exceptions silently */ }
     }
 
-    private Vector2 WindowOffset => GameController.Window.GetWindowRectangleTimeCache.TopLeft;
     private bool DumpEverything()
     {
         var inventoryItems = Ui.InventoryList;
@@ -214,17 +215,33 @@ public class Copilot : BaseSettingsPlugin<CopilotSettings>
 
         ClickLabel(stash, 1000);
 
-        // TODO: go to the correct tab
+        var panel = Ui.AllStashPanel;
+        if (!panel.IsVisible)
+        {
+            Log.Error("All stash panel should be open.");
+            return false;
+        }
+
+        var theOne = Ui.AllStashPanel.Children.FirstOrDefault(x => x?.GetChildAtIndex(0)?.GetChildAtIndex(1)?.Text == Settings.Dumper.SelectedTab.Value);
+        if (theOne == null)
+        {
+            Log.Error($"Tab {Settings.Dumper.SelectedTab.Value} not found.");
+            return false;
+        }
+
+        var screenPoint = new Point((int)theOne.GetClientRectCache.Center.X, (int)theOne.GetClientRectCache.Center.Y);
+        Mouse.LeftClick(screenPoint, 1000);
 
         Log.Message($"Inventory items count: {inventoryItems.Count}");
+        Keyboard.KeyDown(Keys.ControlKey);
+        Thread.Sleep(100);
         foreach (var item in inventoryItems)
         {
-            Keyboard.KeyDown(Keys.ControlKey);
             var pos = item.GetClientRect().Center + WindowOffset;
             Mouse.LeftClick(new Point((int)pos.X, (int)pos.Y), 20);
             Thread.Sleep(Settings.Dumper.ClickDelay.Value);
-            Keyboard.KeyUp(Keys.ControlKey);
         }
+        Keyboard.KeyUp(Keys.ControlKey);
 
         return true; // shouldn't continue
     }
@@ -273,25 +290,27 @@ public class Copilot : BaseSettingsPlugin<CopilotSettings>
 
     private bool PickUpItem()
     {
+        // TODO: check if inventory is full
+        var inventoryItems = Ui.InventoryList;
+        // if (inventoryItems.Count 
+
         var pos = Settings.Pickup.UseTargetPosition.Value ? _followTarget.Pos : PlayerPos;
         try
         {
             var items = Ui.IngameUi.ItemsOnGroundLabelsVisible;
-            if (items != null)
-            {
-                var filteredItems = Settings.Pickup.Filter.Value.Split(',');
-                var item = items?
-                    .OrderBy(x => Vector3.Distance(pos, x.ItemOnGround.Pos))
-                    .FirstOrDefault(x => filteredItems.Any(y => x.Label.Text != null && x.Label.Text.Contains(y)));
-                if (item == null) return false;
+            if (items == null) return false;
+            var filteredItems = Settings.Pickup.Filter.Value.Split(',');
+            var item = items?
+                .OrderBy(x => Vector3.Distance(pos, x.ItemOnGround.Pos))
+                .FirstOrDefault(x => filteredItems.Any(y => x.Label.Text != null && x.Label.Text.Contains(y)));
+            if (item == null) return false;
 
-                var distanceToItem = Vector3.Distance(pos, item.ItemOnGround.Pos);
-                if (distanceToItem <= Settings.Pickup.Range.Value)
-                {
-                    ClickLabel(item, 50);
-                    _nextAllowedActionTime = DateTime.Now.AddMilliseconds(Settings.ActionCooldown.Value);
-                    return true;
-                }
+            var distanceToItem = Vector3.Distance(pos, item.ItemOnGround.Pos);
+            if (distanceToItem <= Settings.Pickup.Range.Value)
+            {
+                ClickLabel(item, 50);
+                _nextAllowedActionTime = DateTime.Now.AddMilliseconds(Settings.ActionCooldown.Value);
+                return true;
             }
         }
         catch (Exception) { /* Handle exceptions silently */ }

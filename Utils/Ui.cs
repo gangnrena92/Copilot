@@ -18,6 +18,7 @@ public static class Ui
     public static Camera Camera => GameController.Game.IngameState.Camera;
     public static AreaInstance CurrentArea => GameController.Area.CurrentArea;
     public static List<StashTabContainerInventory> GuildStashInventory => IngameUi.GuildStashElement.Inventories;
+    public static Element AllStashPanel => IngameUi.GuildStashElement.ViewAllStashPanel.GetChildAtIndex(2);
     public static List<Entity> EntityList => GameController.EntityListWrapper.OnlyValidEntities;
     public static IList<Element> InventoryList => IngameUi.InventoryPanel.GetChildAtIndex(3).GetChildAtIndex(33).Children.ToList().Skip(3).ToList();
 
