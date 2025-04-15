@@ -13,6 +13,7 @@ public static class SyncInput
         Input.KeyUp(Keys.LControlKey);
         Input.KeyUp(Keys.Shift);
         Input.KeyUp(Keys.Space);
+        Input.KeyUp(Copilot.Main.Settings.Additional.FollowKey.Value);
     }
 
     public static async SyncTask<bool> PressKey(Keys key)
