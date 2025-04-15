@@ -8,7 +8,7 @@ namespace Copilot.Settings;
 [Submenu(CollapsedByDefault = false)]
 public class AdditionalSettings
 {
-    [Menu("Use Mouse to Follow")]
+    [Menu("Use Mouse to Follow", "This is not recommended.")]
     public ToggleNode UseMouse { get; set; } = new ToggleNode(true);
 
     [Menu("Follow with key")]

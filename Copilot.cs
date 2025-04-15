@@ -48,6 +48,8 @@ public class Copilot : BaseSettingsPlugin<CopilotSettings>
             FollowCoRoutine.Init();
             BlinkCoRoutine.Init();
             DumperCoRoutine.Init();
+            ShockBotCoRoutine.Init();
+            CurseBotCoRoutine.Init();
         }
         else
         {
@@ -56,6 +58,8 @@ public class Copilot : BaseSettingsPlugin<CopilotSettings>
             FollowCoRoutine.Stop();
             BlinkCoRoutine.Stop();
             DumperCoRoutine.Stop();
+            ShockBotCoRoutine.Stop();
+            CurseBotCoRoutine.Stop();
         }
     }
 

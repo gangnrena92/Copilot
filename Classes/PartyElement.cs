@@ -13,7 +13,6 @@ public class PartyElement
     {
         if (TpButton != null && TpButton.IsValid)
         {
-            // return TpButton.GetClientRect().Center;
             var center = (Vector2) TpButton?.GetClientRectCache.Center;
             return center;
         }
