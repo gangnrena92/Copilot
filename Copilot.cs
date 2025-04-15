@@ -74,9 +74,9 @@ public class Copilot : BaseSettingsPlugin<CopilotSettings>
 
     public override void Tick()
     {
-        if (!GameController.Window.IsForeground() || !Settings.Enable.Value) return;
-
-        // Handle pause/unpause toggle
-        if (Settings.TogglePauseHotkey.PressedOnce()) Settings.IsFollowing.Value = !Settings.IsFollowing.Value;
+        if (Settings.TogglePauseHotkey.PressedOnce())
+        {
+            Settings.IsFollowing.Value = !Settings.IsFollowing.Value;
+        }
     }
 }
