@@ -20,7 +20,7 @@ public static class TaskRunner
             var sTask = task();
             while (sTask != null && !cts.Token.IsCancellationRequested)
             {
-                await TaskUtils.RunOrRestart(ref sTask, () => null);
+                TaskUtils.RunOrRestart(ref sTask, () => null);
                 await TaskUtils.NextFrame();
             }
 
@@ -35,6 +35,7 @@ public static class TaskRunner
             cts.Cancel();
             Tasks.TryRemove(new KeyValuePair<string, CancellationTokenSource>(name, cts));
         }
+        SyncInput.ReleaseKeys();
     }
 
     public static bool Has(string name)

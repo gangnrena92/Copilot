@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
-// using ImGuiNET;
 
 using Copilot.Utils;
 
@@ -32,7 +31,7 @@ public class CopilotSettingsHandler
     {
         try
         {
-            Settings.Dumper.SelectedTab.SetListValues(GetGuildStashList());
+            Settings.Tasks.Dumper.SelectedTab.SetListValues(GetGuildStashList());
         } catch (Exception ex) {
             Log.Error("Error drawing guild stash dropdown: " + ex.Message);
         }

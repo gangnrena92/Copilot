@@ -1,18 +1,17 @@
 ﻿using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
-using System.Numerics;
 
 using ExileCore2;
 using ExileCore2.PoEMemory;
 using ExileCore2.PoEMemory.Elements;
 using ExileCore2.PoEMemory.MemoryObjects;
 
+using static Copilot.Copilot;
+
 namespace Copilot.Utils;
 public static class Ui
 {
-    private static GameController GameController => Copilot.Main.GameController;
-
+    public static GameController GameController => Main.GameController;
     public static IngameUIElements IngameUi => GameController.IngameState.IngameUi;
     public static Element UIRoot => GameController.IngameState.UIRoot;
     public static Camera Camera => GameController.Game.IngameState.Camera;
@@ -21,18 +20,6 @@ public static class Ui
     public static Element AllStashPanel => IngameUi.GuildStashElement.ViewAllStashPanel.GetChildAtIndex(2);
     public static List<Entity> EntityList => GameController.EntityListWrapper.OnlyValidEntities;
     public static IList<Element> InventoryList => IngameUi.InventoryPanel.GetChildAtIndex(3).GetChildAtIndex(33).Children.ToList().Skip(3).ToList();
-
-    public static Point AdjustPosition(Vector2 position, string offset="TopLeft")
-    {
-        var windowOffset = GameController.Window.GetWindowRectangle();
-        var adjustedOffset = offset switch
-        {
-            "TopLeft" => windowOffset.TopLeft,
-            _ => Vector2.Zero
-        };
-        var adjustedPos = new Point((int)(position.X + adjustedOffset.X), (int)(position.Y + adjustedOffset.Y));
-        return adjustedPos;
-    }
 
     public static Element GetTpConfirmation()
     {
