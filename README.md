@@ -30,6 +30,25 @@ Please **do not** open an issue if the plugin isn't working due to your settings
 ## Known bugs
 - May experience issues in "ARENA".
 
+## Customs
+
+This is a simple example for a Curse bot.
+```csharp
+if (globals.Target == null) return "No target";
+if (globals.Player.DistanceTo(globals.Target) > 1000) return "Too far from target"; 
+
+var monster = Entities
+  .NearbyMonsters(additionalFilters: e => e.IsDead)
+  .FirstOrDefault();
+
+if (monster == null) return "No monsters.";
+if (globals.Player.DistanceTo(monster) > 1000) return "Too far";
+
+SyncInput.MoveMouse(monster, 100);
+SyncInput.KeyPress(Keys.Q);
+return "Action completed!";
+```
+
 ## Donations
 <a href="https://www.paypal.com/donate/?hosted_button_id=NX4PVU9B2YFDU">
   <img src="./assets/donate.png" width="200">
