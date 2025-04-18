@@ -20,6 +20,8 @@ using Copilot.Settings;
 
 namespace Copilot.CoRoutines;
 
+// TODO: give access to millis variable
+
 public class CustomCoRoutine
 {
     private readonly CustomSettings Settings;
@@ -72,6 +74,7 @@ public class CustomCoRoutine
         .AddReferences(metadataReference)
         .AddImports(
             "System.Collections.Generic", "System.Linq", "System.Numerics", "System.Windows.Forms", "System.Threading.Tasks",
+            "System.Threading", "System",
             "Copilot", "Copilot.Classes", "Copilot.Utils", "Copilot.Settings", "Copilot.Settings.Tasks", "Copilot.Api",
             "ExileCore2", "ExileCore2.Shared", "ExileCore2.Shared.Enums",
             "ExileCore2.Shared.Helpers", "ExileCore2.PoEMemory.Components", "ExileCore2.PoEMemory.MemoryObjects",
@@ -121,12 +124,7 @@ public class CustomCoRoutine
 
             try
             {
-                var globals = new ScriptGlobals
-                {
-                    Player = _player,
-                    Target = _target,
-                    Settings = Settings
-                };
+                var globals = new ScriptGlobals { Player = _player, Target = _target, Settings = Settings };
                 var result = func(globals);
                 Log.Message($"Result: {result}");
             }

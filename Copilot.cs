@@ -66,7 +66,6 @@ public sealed class Copilot : BaseSettingsPlugin<CopilotSettings>
             FollowCoRoutine.Init();
             BlinkCoRoutine.Init();
             DumperCoRoutine.Init();
-            ShockBotCoRoutine.Init();
 
             foreach (var customCoRoutine in CustomCoRoutines)
                 customCoRoutine.Init();
@@ -78,7 +77,6 @@ public sealed class Copilot : BaseSettingsPlugin<CopilotSettings>
             FollowCoRoutine.Stop();
             BlinkCoRoutine.Stop();
             DumperCoRoutine.Stop();
-            ShockBotCoRoutine.Stop();
 
             foreach (var customCoRoutine in CustomCoRoutines)
                 customCoRoutine.Stop();
@@ -100,9 +98,13 @@ public sealed class Copilot : BaseSettingsPlugin<CopilotSettings>
 
     public override void Tick()
     {
+        if (!Settings.Enable || !GameController.Window.IsForeground()) return;
+
         if (Settings.TogglePauseHotkey.PressedOnce())
         {
             Settings.IsFollowing.Value = !Settings.IsFollowing.Value;
         }
+
+        _player = new EntityWrapper(GameController.Player);
     }
 }

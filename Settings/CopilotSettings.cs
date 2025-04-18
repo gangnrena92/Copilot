@@ -45,18 +45,11 @@ public class TasksSettings
     [Menu("Enable Pickup", "This will enable the pickup task.")]
     public ToggleNode IsPickupEnabled { get; set; } = new ToggleNode(false);
 
-    [Menu("Enable Shock Bot", "This will enable the shock bot task.")]
-    public ToggleNode IsShockBotEnabled { get; set; } = new ToggleNode(false);
-
-    [Menu("Enable Curse Bot", "This will enable the curse bot task.")]
-    public ToggleNode IsCurseBotEnabled { get; set; } = new ToggleNode(false);
-
     [Menu("Enable Guild Stash Dumper", "This will enable the guild stash dumper task.")]
     public ToggleNode IsDumperEnabled { get; set; } = new ToggleNode(false);
 
     public UiCheckerSettings UiChecker { get; set; } = new UiCheckerSettings();
     public BlinkSettings Blink { get; set; } = new BlinkSettings();
     public PickupSettings Pickup { get; set; } = new PickupSettings();
-    public ShockBotSettings ShockBot { get; set; } = new ShockBotSettings();
     public GuildStashDumperSettings Dumper { get; set; } = new GuildStashDumperSettings();
 }
