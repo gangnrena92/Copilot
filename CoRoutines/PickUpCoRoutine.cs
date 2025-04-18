@@ -5,12 +5,13 @@ using System.Threading.Tasks;
 using ExileCore2.Shared;
 
 using static Copilot.Copilot;
-using static Copilot.Utils.Ui;
+using static Copilot.Api.Ui;
 using Copilot.Utils;
 using Copilot.Settings;
 using Copilot.Settings.Tasks;
 
 namespace Copilot.CoRoutines;
+
 internal class PickUpCoRoutine
 {
     private static TasksSettings Settings => Main.Settings.Tasks;
@@ -34,23 +35,24 @@ internal class PickUpCoRoutine
     {
         while (true)
         {
-            await Task.Delay(PickupSettings.Delay.Value);
-            if (!(Main.DistanceToTarget <= PickupSettings.RangeToIgnore.Value)) continue;
+            await Task.Delay(PickupSettings.Delay);
+            if (!(_player.DistanceTo(_target) <= PickupSettings.RangeToIgnore)) continue;
 
-            var pos = PickupSettings.UseTargetPosition.Value ? Main._followTarget.Pos : Main.PlayerPos;
+            var entity = PickupSettings.UseTargetPosition ? _target : _player;
             var items = IngameUi.ItemsOnGroundLabelsVisible;
             if (items == null) continue;
+
             var filteredItems = PickupSettings.Filter.Value.Split(',');
             var item = items?
-                .OrderBy(x => Vector3.Distance(pos, x.ItemOnGround.Pos))
+                .OrderBy(x => entity.DistanceTo(x.ItemOnGround))
                 .FirstOrDefault(x => filteredItems.Any(y => x.Label.Text != null && x.Label.Text.Contains(y)));
             if (item == null) continue;
 
-            var distanceToItem = Vector3.Distance(pos, item.ItemOnGround.Pos);
-            if (!(distanceToItem <= PickupSettings.Range.Value)) continue;
+            var distanceToItem = entity.DistanceTo(item.ItemOnGround);
+            if (!(distanceToItem <= PickupSettings.Range)) continue;
 
             Log.Message("Picking up item: " + item.Label.Text);
-            await SyncInput.LClick(Camera.WorldToScreen(item.ItemOnGround.Pos));
+            await SyncInput.LClick(item.ItemOnGround, 10);
         }
     }
 }

@@ -5,7 +5,7 @@ using ExileCore2.Shared.Attributes;
 
 namespace Copilot.Settings;
 
-[Submenu(CollapsedByDefault = false)]
+[Submenu(CollapsedByDefault = true)]
 public class AdditionalSettings
 {
     [Menu("Use Mouse to Follow", "This is not recommended.")]

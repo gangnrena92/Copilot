@@ -8,29 +8,28 @@ using ExileCore2.PoEMemory.MemoryObjects;
 
 using static Copilot.Copilot;
 
-namespace Copilot.Utils;
+namespace Copilot.Api;
+
 public static class Ui
 {
-    public static GameController GameController => Main.GameController;
-    public static IngameUIElements IngameUi => GameController.IngameState.IngameUi;
-    public static Element UIRoot => GameController.IngameState.UIRoot;
-    public static Camera Camera => GameController.Game.IngameState.Camera;
-    public static AreaInstance CurrentArea => GameController.Area.CurrentArea;
-    public static List<StashTabContainerInventory> GuildStashInventory => IngameUi.GuildStashElement.Inventories;
-    public static Element AllStashPanel => IngameUi.GuildStashElement.ViewAllStashPanel.GetChildAtIndex(2);
-    public static List<Entity> EntityList => GameController.EntityListWrapper.OnlyValidEntities;
-    public static IList<Element> InventoryList => IngameUi.InventoryPanel.GetChildAtIndex(3).GetChildAtIndex(33).Children.ToList().Skip(3).ToList();
+    private static GameController GameController => Main.GameController;
+
+    public static IngameState IngameState => GameController.IngameState;
+
+    public static IngameUIElements IngameUi => IngameState.IngameUi;
+
+    public static Element UIRoot => IngameState.UIRoot;
+
+    public static Camera Camera => IngameState.Camera;
 
     public static Element GetTpConfirmation()
     {
         try
         {
             var ui = IngameUi.PopUpWindow.Children[0].Children[0];
-
-            if (ui.Children[0].Text.Equals("Are you sure you want to teleport to this player's location?"))
-                return ui.Children[3].Children[0];
-
-            return null;
+            return ui.Children[0].Text.StartsWith("Are you sure you want to teleport")
+                ? ui.Children[3].Children[0]
+                : null;
         }
         catch
         {
@@ -53,5 +52,17 @@ public static class Ui
                 (worldMap?.IsVisible != null && (bool)worldMap?.IsVisible) ||
                 (npcDialog?.IsVisible != null && (bool)npcDialog?.IsVisible) ||
                 (market?.IsVisible != null && (bool)market?.IsVisible);
+    }
+
+    public static List<string> GetPartyList()
+    {
+        var list = IngameUi.PartyElement.Children?[0]?.Children;
+        return list?.Select(x => x?.Children?[0]?.Children?[0]?.Text).ToList() ?? new List<string>();
+    }
+
+    public static List<string> GetGuildStashList()
+    {
+        var list = Stash.GuildInventories;
+        return list != null && list.Count > 0 ? list.Select(stash => stash.TabName).ToList() : new List<string>();
     }
 }

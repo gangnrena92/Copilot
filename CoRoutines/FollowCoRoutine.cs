@@ -12,21 +12,21 @@ using ExileCore2.Shared;
 using ExileCore2.Shared.Enums;
 
 using static Copilot.Copilot;
-using static Copilot.Utils.Ui;
+using static Copilot.Api.Ui;
+using Copilot.Api;
 using Copilot.Utils;
 using Copilot.Settings;
 using Copilot.Classes;
 
 namespace Copilot.CoRoutines;
+
 internal class FollowCoRoutine
 {
-    private static Entity target => Main._followTarget;
-    private static Vector3 PlayerPos => Main.PlayerPos;
     private static CopilotSettings Settings => Main.Settings;
-    private static float DistanceToTarget => Vector3.Distance(PlayerPos, target.Pos);
-    private static Vector3 lastTargetPosition = Vector3.Zero;
 
     private static LoggerPlus Log = new LoggerPlus("FollowCoRoutine");
+
+    private static Vector3 lastTargetPosition = Vector3.Zero;
 
     public static void Init()
     {
@@ -42,37 +42,40 @@ internal class FollowCoRoutine
     {
         while (true)
         {
-            await Task.Delay(Settings.ActionCooldown.Value);
+            await Task.Delay(Settings.ActionCooldown);
 
             // If paused, disabled, or not ready for the next action, do nothing
-            if (Ui.GameController.Player == null || Ui.GameController.IsLoading) continue;
+            if (_player == null || State.IsLoading) continue;
 
-            Main._followTarget = GetFollowingTarget();
+            _target = new EntityWrapper(GetFollowingTarget());
             var leaderPE = GetLeaderPartyElement();
 
             // If the target is not found, or the player is not in the same zone
-            if (target == null)
+            if (_target == null)
             {
-                if (!leaderPE.ZoneName.Equals(CurrentArea.DisplayName))
+                if (!leaderPE.ZoneName.Equals(State.AreaName))
                     await FollowUsingPortalOrTpButton(leaderPE);
                 continue;
             }
-            if (CurrentArea.IsTown || (CurrentArea.IsHideout && Ui.InventoryList.Count != 0)) continue;
+
+            if (State.IsTown || (State.IsHideout && Settings.Tasks.IsDumperEnabled && Api.Inventory.Items.Count != 0)) continue;
+
+            var distanceToTarget = _player.DistanceTo(_target);
 
             // If within the follow distance, do nothing
-            if (DistanceToTarget <= Settings.FollowDistance.Value) continue;
+            if (distanceToTarget <= Settings.FollowDistance) continue;
 
-            if (lastTargetPosition == Vector3.Zero) lastTargetPosition = target.Pos;
+            if (lastTargetPosition == Vector3.Zero) lastTargetPosition = _target.Pos;
 
             // check if the distance of the target changed significantly from the last position OR if there is a boss near and the distance is less than 2000
-            if (DistanceToTarget > 3000)
+            if (distanceToTarget > 3000)
             {
                 var portal = GetBestPortalLabel();
-                await SyncInput.LClick(Ui.Camera.WorldToScreen(portal.ItemOnGround.Pos), 300);
+                await SyncInput.LClick(portal.ItemOnGround, 300);
             }
             else
             {
-                await MoveToward(target.Pos);
+                await MoveToward();
                 Main.AllowBlinkTask = true;
             }
         }
@@ -83,7 +86,7 @@ internal class FollowCoRoutine
         try
         {
             var leaderName = Settings.TargetPlayerName.Value.ToLower();
-            var target = Ui.GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Player]
+            var target = Entities.ListByType(EntityType.Player)
                 .FirstOrDefault(x => string.Equals(x.GetComponent<Player>()?.PlayerName.ToLower(), leaderName, StringComparison.OrdinalIgnoreCase));
             return target;
         }
@@ -103,7 +106,7 @@ internal class FollowCoRoutine
             {
                 PlayerName = leader.Children?[0]?.Children?[0]?.Text,
                 TpButton = leader?.Children?[4],
-                ZoneName = leader.Children[3].Text ?? CurrentArea.DisplayName
+                ZoneName = leader.Children[3].Text ?? State.AreaName
             };
             return leaderPartyElement;
         }
@@ -117,17 +120,17 @@ internal class FollowCoRoutine
     {
         var portal = GetBestPortalLabel();
         const int threshold = 1000;
-        var distanceToPortal = portal != null ? Vector3.Distance(PlayerPos, portal.ItemOnGround.Pos) : threshold + 1;
-        if ((CurrentArea.IsHideout ||
-                (CurrentArea.Name.Equals("The Temple of Chaos") && leaderPE.ZoneName.Equals("The Trial of Chaos")
+        var distanceToPortal = portal != null ? _player.DistanceTo(portal.ItemOnGround) : threshold + 1;
+        if ((State.IsHideout ||
+                (State.AreaName.Equals("The Temple of Chaos") && leaderPE.ZoneName.Equals("The Trial of Chaos")
             )) && distanceToPortal <= threshold)
         { // if in hideout and near the portal
-            await SyncInput.LClick(Ui.Camera.WorldToScreen(portal.ItemOnGround.Pos));
+            await SyncInput.LClick(portal.ItemOnGround, 10);
             if (leaderPE?.TpButton != null && GetTpConfirmation() != null) await SyncInput.PressKey(Keys.Escape);
         }
         else if (leaderPE?.TpButton != null)
         {
-            await SyncInput.LClick(leaderPE.GetTpButtonPosition());
+            await SyncInput.LClick(leaderPE.GetTpButtonPosition(), 10);
 
             if (leaderPE.TpButton != null)
             { // check if the tp confirmation is open
@@ -152,7 +155,7 @@ internal class FollowCoRoutine
 
             var random = new Random();
 
-            return CurrentArea.IsHideout
+            return State.IsHideout
                 ? portalLabels?[random.Next(portalLabels.Count)]
                 : portalLabels?.FirstOrDefault();
         }
@@ -162,21 +165,18 @@ internal class FollowCoRoutine
         }
     }
 
-    private static async SyncTask<bool> MoveToward(Vector3 targetPos)
+    private static async SyncTask<bool> MoveToward()
     {
-        var screenPos = Ui.Camera.WorldToScreen(targetPos);
-
-        if (Settings.Additional.UseMouse.Value)
+        if (Settings.Additional.UseMouse)
         {
-            await SyncInput.LClick(screenPos, 20);
+            await SyncInput.LClick(_target, 20);
         }
         else
         {
-            Input.SetCursorPos(screenPos);
-            Input.MouseMove();
+            await SyncInput.MoveMouse(_target, 10);
             await SyncInput.PressKey(Keys.T);
         }
-        lastTargetPosition = targetPos;
+        lastTargetPosition = _target.Pos;
         return true;
     }
 }

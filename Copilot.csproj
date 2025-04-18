@@ -1,19 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <EnableDynamicLoading>true</EnableDynamicLoading>
     <TargetFramework>net8.0-windows</TargetFramework>
     <OutputType>Library</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
     <PlatformTarget>x64</PlatformTarget>
-    <LangVersion>latest</LangVersion>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DebugType>embedded</DebugType>
+    <LangVersion>latest</LangVersion>
     <PathMap>$(MSBuildProjectDirectory)=$(MSBuildProjectName)</PathMap>
     <EmbedAllSources>true</EmbedAllSources>
-    <!--Don't bother setting anything to do with the output path, HUD will do it for you if you put the source code inside Plugins/Source-->
   </PropertyGroup>
 
   <ItemGroup>
-    <!--Rather than replacing this with absolute or relative paths, you should create an environment variable for wherever your HUD folder is-->
     <Reference Include="ExileCore2">
       <HintPath>..\..\..\ExileCore2.dll</HintPath>
       <Private>False</Private>
@@ -28,5 +27,7 @@
     <PackageReference Include="ImGui.NET" Version="1.90.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="SharpDX.Mathematics" Version="4.2.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.11.0" />
+    <PackageReference Include="System.Linq.Dynamic.Core" Version="1.3.7" />
   </ItemGroup>
 </Project>

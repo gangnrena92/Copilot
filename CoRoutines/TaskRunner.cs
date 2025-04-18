@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 
 using ExileCore2.Shared;
 
+using Copilot.Utils;
+
 namespace Copilot.CoRoutines;
+
 public static class TaskRunner
 {
     private static readonly ConcurrentDictionary<string, CancellationTokenSource> Tasks = [];

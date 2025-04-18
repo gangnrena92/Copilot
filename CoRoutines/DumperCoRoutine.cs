@@ -6,12 +6,13 @@ using ExileCore2;
 using ExileCore2.Shared;
 
 using static Copilot.Copilot;
-using static Copilot.Utils.Ui;
 using Copilot.Utils;
 using Copilot.Settings;
 using Copilot.Settings.Tasks;
+using Copilot.Api;
 
 namespace Copilot.CoRoutines;
+
 internal class DumperCoRoutine
 {
     private static TasksSettings Settings => Main.Settings.Tasks;
@@ -21,7 +22,7 @@ internal class DumperCoRoutine
 
     public static void Init()
     {
-        if (Settings.IsDumperEnabled.Value)
+        if (Settings.IsDumperEnabled)
         {
             TaskRunner.Run(Dumper_Task, "DumperCoRoutine");
         }
@@ -37,30 +38,29 @@ internal class DumperCoRoutine
         while (true)
         {
             Log.Message("Dumper Task running...");
-            await Task.Delay(DumperSettings.Cooldown.Value);
-            Log.Message("Dumper after delay...");
-            if (!CurrentArea.IsHideout || InventoryList.Count == 0) continue;
+            await Task.Delay(DumperSettings.Cooldown);
+            if (!State.IsHideout || Inventory.Items.Count == 0) continue;
 
-            var stash = IngameUi.ItemsOnGroundLabelsVisible
+            var stash = Ui.IngameUi.ItemsOnGroundLabelsVisible
                 .Where(e => e.ItemOnGround.Metadata.ToLower().Contains("guildstash"))
                 .FirstOrDefault();
             if (stash == null) continue;
 
-            await SyncInput.LClick(Camera.WorldToScreen(stash.ItemOnGround.Pos), 1000);
+            await SyncInput.LClick(stash.ItemOnGround.Pos, 1000);
 
-            if (!AllStashPanel.IsVisible) continue;
+            if (!Stash.GuildTabs.IsVisible) continue;
 
-            var tab = AllStashPanel.Children.FirstOrDefault(x => x?.GetChildAtIndex(0)?.GetChildAtIndex(1)?.Text == DumperSettings.SelectedTab.Value);
+            var tab = Stash.GetGuildTab(DumperSettings.SelectedTab);
             if (tab == null) continue;
 
             await SyncInput.LClick(tab.GetClientRectCache.Center, 1000);
 
             Input.KeyDown(Keys.ControlKey);
             await Task.Delay(100);
-            foreach (var item in InventoryList)
+            foreach (var item in Inventory.Items)
             {
                 await SyncInput.LClick(item.GetClientRect().Center, 20);
-                await Task.Delay(DumperSettings.ClickDelay.Value);
+                await Task.Delay(DumperSettings.ClickDelay);
             }
             Input.KeyUp(Keys.ControlKey);
         }

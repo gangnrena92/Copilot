@@ -1,11 +1,16 @@
+using System;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Numerics;
 
 using ExileCore2;
 using ExileCore2.Shared;
+using ExileCore2.PoEMemory.MemoryObjects;
 
-namespace Copilot.CoRoutines;
+using Copilot.Api;
+
+namespace Copilot.Utils;
+
 public static class SyncInput
 {
     public static void ReleaseKeys()
@@ -26,19 +31,44 @@ public static class SyncInput
         return true;
     }
 
-    public static async SyncTask<bool> MoveMouse(Vector2 pos, int afterDelay = 10)
+    public static void KeyPress(Keys key)
     {
-        Input.SetCursorPos(pos);
-        Input.MouseMove();
+        Input.KeyDown(key);
+        Input.KeyUp(key);
+    }
+
+    public static async SyncTask<bool> MoveMouse(object entityOrPos, int afterDelay)
+    {
+        MoveMouse(entityOrPos);
         await Task.Delay(afterDelay);
         return true;
     }
 
-    public static async SyncTask<bool> LClick(Vector2 pos, int afterDelay = 10)
+    public static void MoveMouse(object entityOrPos)
     {
-        await MoveMouse(pos, afterDelay);
-        Input.Click(MouseButtons.Left);
+        Vector2 pos = entityOrPos switch
+        {
+            Entity entity => Ui.Camera.WorldToScreen(entity.Pos),
+            EntityWrapper entityWrapper => Ui.Camera.WorldToScreen(entityWrapper.Pos),
+            Vector3 vector3 => Ui.Camera.WorldToScreen(vector3),
+            Vector2 vector2 => vector2,
+            _ => throw new ArgumentException("Unsupported type for MoveMouse", nameof(entityOrPos))
+        };
+
+        Input.SetCursorPos(pos);
+        Input.MouseMove();
+    }
+
+    public static async SyncTask<bool> LClick(object entityOrPos, int afterDelay)
+    {
+        LClick(entityOrPos);
         await Task.Delay(afterDelay);
         return true;
+    }
+
+    public static void LClick(object entityOrPos)
+    {
+        MoveMouse(entityOrPos);
+        Input.Click(MouseButtons.Left);
     }
 }

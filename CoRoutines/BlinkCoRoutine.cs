@@ -9,6 +9,7 @@ using Copilot.Settings;
 using Copilot.Settings.Tasks;
 
 namespace Copilot.CoRoutines;
+
 internal class BlinkCoRoutine
 {
     private static TasksSettings Settings => Main.Settings.Tasks;
@@ -18,7 +19,7 @@ internal class BlinkCoRoutine
 
     public static void Init()
     {
-        if (Settings.IsBlinkEnabled.Value)
+        if (Settings.IsBlinkEnabled)
         {
             TaskRunner.Run(Blink_Task, "Blink");
         }
@@ -33,8 +34,8 @@ internal class BlinkCoRoutine
     {
         while (true)
         {
-            await Task.Delay(BlinkSettings.Cooldown.Value);
-            if (!Main.AllowBlinkTask || Main.DistanceToTarget < BlinkSettings.Range.Value) continue;
+            await Task.Delay(BlinkSettings.Cooldown);
+            if (!Main.AllowBlinkTask || _player.DistanceTo(_target) < BlinkSettings.Range) continue;
             Log.Message("Blinking...");
             Main.AllowBlinkTask = false;
             await SyncInput.PressKey(Keys.Space);

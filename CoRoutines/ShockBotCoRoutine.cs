@@ -6,7 +6,9 @@ using ExileCore2.Shared;
 using ExileCore2.Shared.Enums;
 
 using static Copilot.Copilot;
+using static Copilot.Api.Ui;
 using Copilot.Utils;
+using Copilot.Api;
 using Copilot.Settings;
 using Copilot.Settings.Tasks;
 
@@ -20,7 +22,7 @@ internal class ShockBotCoRoutine
 
     public static void Init()
     {
-        if (Settings.IsShockBotEnabled.Value)
+        if (Settings.IsShockBotEnabled)
         {
             TaskRunner.Run(ShockBot_Task, "ShockBotCoRoutine");
         }
@@ -35,31 +37,28 @@ internal class ShockBotCoRoutine
     {
         while (true)
         {
-            await Task.Delay(ShockBotSettings.ActionCooldown.Value);
+            await Task.Delay(ShockBotSettings.ActionCooldown);
 
-            var monster = Ui.EntityList
-                .Where(e => e.Type == EntityType.Monster && e.IsAlive && (e.Rarity == MonsterRarity.Rare || e.Rarity == MonsterRarity.Unique))
-                .OrderBy(e => Vector3.Distance(Main.PlayerPos, e.Pos))
+            var monster = Entities
+                .NearbyMonsters(EntityRarity.AtLeastRare, additionalFilters: e => e.IsAlive)
                 .FirstOrDefault();
-
             if (monster == null) continue;
 
-            var distanceToMonster = Vector3.Distance(Main.PlayerPos, monster.Pos);
-            if (distanceToMonster > ShockBotSettings.Range) continue;
+            if (_player.DistanceTo(monster) > ShockBotSettings.Range) continue;
 
-            await SyncInput.MoveMouse(Ui.Camera.WorldToScreen(monster.Pos), 100);
-            await SyncInput.PressKey(ShockBotSettings.BallLightningKey.Value);
+            await SyncInput.MoveMouse(monster, 100);
+            await SyncInput.PressKey(ShockBotSettings.BallLightningKey);
 
             // track the balls
-            var ball = Ui.EntityList
+            var ball = Entities.ValidList
                 .Where(e => e.IsDead && e.Metadata == "Metadata/Projectiles/BallLightningPlayer")
                 .OrderBy(e => Vector3.Distance(monster.Pos, e.Pos))
                 .FirstOrDefault();
 
-            if (ball != null && Vector3.Distance(monster.Pos, ball.Pos) <= ShockBotSettings.RangeToUseLightningWarp.Value)
+            if (ball != null && Vector3.Distance(monster.Pos, ball.Pos) <= ShockBotSettings.RangeToUseLightningWarp)
             {
-                await SyncInput.MoveMouse(Ui.Camera.WorldToScreen(ball.Pos), 50);
-                await SyncInput.PressKey(ShockBotSettings.LightningWarpKey.Value);
+                await SyncInput.MoveMouse(ball, 50);
+                await SyncInput.PressKey(ShockBotSettings.LightningWarpKey);
             }
         }
     }

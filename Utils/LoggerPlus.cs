@@ -10,10 +10,10 @@ public class LoggerPlus
         _fileName = fileName;
     }
 
-    public void Message(string message)
+    public void Message(string message, int delay = 5)
     {
         if (!Copilot.Settings.Additional.Debug) return;
-        Copilot.LogMessage($"[{_fileName}] {message}", 5);
+        Copilot.LogMessage($"[{_fileName}] {message}", delay);
     }
 
     public void Error(string message)

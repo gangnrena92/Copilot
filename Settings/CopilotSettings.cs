@@ -5,6 +5,7 @@ using ExileCore2.Shared.Nodes;
 using ExileCore2.Shared.Attributes;
 
 using Copilot.Settings.Tasks;
+using System.Collections.Generic;
 
 namespace Copilot.Settings;
 public class CopilotSettings : ISettings
@@ -28,9 +29,11 @@ public class CopilotSettings : ISettings
 
     [Menu("Additional Settings")]
     public AdditionalSettings Additional { get; set; } = new AdditionalSettings();
+
+    public List<CustomSettings> CustomSettingsList { get; set; } = new List<CustomSettings>();
 }
 
-[Submenu(CollapsedByDefault = false)]
+[Submenu(CollapsedByDefault = true)]
 public class TasksSettings
 {
     [Menu("Enable UI Checker", "This will enable the UI checker task.")]
@@ -55,6 +58,5 @@ public class TasksSettings
     public BlinkSettings Blink { get; set; } = new BlinkSettings();
     public PickupSettings Pickup { get; set; } = new PickupSettings();
     public ShockBotSettings ShockBot { get; set; } = new ShockBotSettings();
-    public CurseBotSettings CurseBot { get; set; } = new CurseBotSettings();
     public GuildStashDumperSettings Dumper { get; set; } = new GuildStashDumperSettings();
 }

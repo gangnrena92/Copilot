@@ -1,11 +1,13 @@
 ﻿using System.Numerics;
 
 using ExileCore2;
-using ExileCore2.PoEMemory.MemoryObjects;
 
 using Copilot.Utils;
 using Copilot.Settings;
 using Copilot.CoRoutines;
+using Copilot.Api;
+using System.Collections.Generic;
+using System.Linq;
 
 // TODO: ghost follow
 // - debug to see like a crosshair
@@ -15,17 +17,19 @@ using Copilot.CoRoutines;
 // TODO: better pickup filter make it able to use regex
 
 namespace Copilot;
-public class Copilot : BaseSettingsPlugin<CopilotSettings>
+
+public sealed class Copilot : BaseSettingsPlugin<CopilotSettings>
 {
     public static Copilot Main;
     public LoggerPlus Log => new LoggerPlus("Core");
 
     public bool AllowBlinkTask = false;
 
-    public Entity _followTarget;
+    public static EntityWrapper _target;
+    public static EntityWrapper _player;
     public Vector3 lastTargetPosition = Vector3.Zero;
-    public Vector3 PlayerPos => GameController.Player.Pos;
-    public float DistanceToTarget => Vector3.Distance(PlayerPos, _followTarget.Pos);
+
+    public List<CustomCoRoutine> CustomCoRoutines = new List<CustomCoRoutine>();
 
     public override bool Initialise()
     {
@@ -36,7 +40,21 @@ public class Copilot : BaseSettingsPlugin<CopilotSettings>
         Settings.Enable.OnValueChanged += (sender, val) => TasksToggle(val);
         Settings.IsFollowing.OnValueChanged += (sender, val) => TasksToggle(val);
 
+        _player = new EntityWrapper(GameController.Player);
+
+        UpdateCustomCoRoutines();
         return base.Initialise();
+    }
+
+    public void UpdateCustomCoRoutines()
+    {
+        foreach (var customCoRoutine in CustomCoRoutines)
+            customCoRoutine.Stop();
+
+        CustomCoRoutines.Clear();
+        CustomCoRoutines = Settings.CustomSettingsList
+            .Select(s => new CustomCoRoutine(s))
+            .ToList();
     }
 
     private void TasksToggle(bool val)
@@ -49,7 +67,9 @@ public class Copilot : BaseSettingsPlugin<CopilotSettings>
             BlinkCoRoutine.Init();
             DumperCoRoutine.Init();
             ShockBotCoRoutine.Init();
-            CurseBotCoRoutine.Init();
+
+            foreach (var customCoRoutine in CustomCoRoutines)
+                customCoRoutine.Init();
         }
         else
         {
@@ -59,20 +79,22 @@ public class Copilot : BaseSettingsPlugin<CopilotSettings>
             BlinkCoRoutine.Stop();
             DumperCoRoutine.Stop();
             ShockBotCoRoutine.Stop();
-            CurseBotCoRoutine.Stop();
+
+            foreach (var customCoRoutine in CustomCoRoutines)
+                customCoRoutine.Stop();
         }
     }
 
     public override void DrawSettings()
     {
-        CopilotSettingsHandler.DrawCustomSettings();
         base.DrawSettings();
+        CopilotSettingsHandler.DrawSettings();
     }
 
     public override void AreaChange(AreaInstance area)
     {
         lastTargetPosition = Vector3.Zero;
-        _followTarget = null;
+        _target = null;
         base.AreaChange(area);
     }
 
