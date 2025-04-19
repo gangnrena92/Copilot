@@ -109,7 +109,7 @@ public sealed class Copilot : BaseSettingsPlugin<CopilotSettings>
             Settings.IsFollowing.Value = !Settings.IsFollowing.Value;
         }
 
-        _player = new EntityWrapper(GameController.Player);
+        _player = (GameController.Player == null || State.IsLoading) ? null : new EntityWrapper(GameController.Player);
         var followEntity = GetFollowingTarget();
         _target = followEntity != null ? new EntityWrapper(followEntity) : null;
     }
