@@ -47,20 +47,19 @@ internal class FollowCoRoutine
             // If paused, disabled, or not ready for the next action, do nothing
             if (_player == null || State.IsLoading) continue;
 
-            _target = new EntityWrapper(GetFollowingTarget());
             var leaderPE = GetLeaderPartyElement();
 
             // If the target is not found, or the player is not in the same zone
             if (_target == null)
             {
+                Log.Message("Target not found, trying to follow the leader...");
                 if (!leaderPE.ZoneName.Equals(State.AreaName))
                     await FollowUsingPortalOrTpButton(leaderPE);
                 continue;
             }
 
             if (State.IsTown || (State.IsHideout && Settings.Tasks.IsDumperEnabled && Api.Inventory.Items.Count != 0)) continue;
-
-            var distanceToTarget = _player.DistanceTo(_target);
+            var distanceToTarget = _player.DistanceTo(_target.Entity);
 
             // If within the follow distance, do nothing
             if (distanceToTarget <= Settings.FollowDistance) continue;
@@ -78,21 +77,6 @@ internal class FollowCoRoutine
                 await MoveToward();
                 Main.AllowBlinkTask = true;
             }
-        }
-    }
-
-    private static Entity GetFollowingTarget()
-    {
-        try
-        {
-            var leaderName = Settings.TargetPlayerName.Value.ToLower();
-            var target = Entities.ListByType(EntityType.Player)
-                .FirstOrDefault(x => string.Equals(x.GetComponent<Player>()?.PlayerName.ToLower(), leaderName, StringComparison.OrdinalIgnoreCase));
-            return target;
-        }
-        catch (Exception)
-        {
-            return null;
         }
     }
 

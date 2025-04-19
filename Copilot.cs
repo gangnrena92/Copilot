@@ -1,13 +1,17 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Linq;
+using System.Numerics;
+using System.Collections.Generic;
 
 using ExileCore2;
+using ExileCore2.PoEMemory.MemoryObjects;
+using ExileCore2.PoEMemory.Components;
+using ExileCore2.Shared.Enums;
 
 using Copilot.Utils;
 using Copilot.Settings;
 using Copilot.CoRoutines;
 using Copilot.Api;
-using System.Collections.Generic;
-using System.Linq;
 
 // TODO: ghost follow
 // - debug to see like a crosshair
@@ -106,5 +110,22 @@ public sealed class Copilot : BaseSettingsPlugin<CopilotSettings>
         }
 
         _player = new EntityWrapper(GameController.Player);
+        var followEntity = GetFollowingTarget();
+        _target = followEntity != null ? new EntityWrapper(followEntity) : null;
+    }
+
+    private Entity GetFollowingTarget()
+    {
+        try
+        {
+            var leaderName = Settings.TargetPlayerName.Value.ToLower();
+            var target = Entities.ListByType(EntityType.Player)
+                .FirstOrDefault(x => string.Equals(x.GetComponent<Player>()?.PlayerName.ToLower(), leaderName, StringComparison.OrdinalIgnoreCase));
+            return target;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 }

@@ -16,13 +16,13 @@ public class EntityWrapper
         _entity = entity;
     }
 
+    public Entity Entity => _entity;
+
     public string Metadata => _entity.Metadata;
 
     public EntityType EntityType => _entity.Type;
 
     public MonsterRarity Rarity => _entity.Rarity;
-
-    public Vector3 Pos => _entity.Pos;
 
     public  bool IsAlive => _entity.IsAlive;
     public bool IsDead => _entity.IsDead;
@@ -45,7 +45,8 @@ public class EntityWrapper
 
     // Others
 
-    // allow to use EntityWrapper or Entity as parameter
+    public Vector3 Pos => _entity.Pos;
+
     public float DistanceTo(EntityWrapper e) => e.DistanceTo(e._entity);
     public float DistanceTo(Entity e) => Vector3.Distance(Pos, e.Pos);
 }
