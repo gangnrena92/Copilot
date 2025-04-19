@@ -53,7 +53,7 @@ internal class FollowCoRoutine
             if (_target == null)
             {
                 Log.Message("Target not found, trying to follow the leader...");
-                if (!leaderPE.ZoneName.Equals(State.AreaName))
+                if (leaderPE != null && !leaderPE.ZoneName.Equals(State.AreaName))
                     await FollowUsingPortalOrTpButton(leaderPE);
                 continue;
             }
@@ -70,6 +70,7 @@ internal class FollowCoRoutine
             if (distanceToTarget > 3000)
             {
                 var portal = GetBestPortalLabel();
+                if (portal == null) continue;
                 await SyncInput.LClick(portal.ItemOnGround, 300);
             }
             else
@@ -121,6 +122,7 @@ internal class FollowCoRoutine
                 var tpConfirmation = GetTpConfirmation();
                 if (tpConfirmation != null) await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
             }
+            await Task.Delay(1000);
         }
         return true;
     }
