@@ -69,6 +69,7 @@ internal class FollowCoRoutine
             // check if the distance of the target changed significantly from the last position OR if there is a boss near and the distance is less than 2000
             if (distanceToTarget > 3000)
             {
+                if (!State.IsTown && !State.IsHideout) continue;
                 var portal = GetBestPortalLabel();
                 if (portal == null) continue;
                 await SyncInput.LClick(portal.ItemOnGround, 300);
