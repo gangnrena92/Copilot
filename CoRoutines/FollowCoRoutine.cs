@@ -45,7 +45,7 @@ internal class FollowCoRoutine
             await Task.Delay(Settings.ActionCooldown);
 
             // If paused, disabled, or not ready for the next action, do nothing
-            if (_player == null || State.IsLoading) continue;
+            if (_player == null || State.IsLoading || Ui.ResurrectPanel.IsVisible) continue;
 
             var leaderPE = GetLeaderPartyElement();
 
@@ -96,7 +96,7 @@ internal class FollowCoRoutine
             };
             return leaderPartyElement;
         }
-        catch (Exception)
+        catch
         {
             return null;
         }
@@ -104,28 +104,36 @@ internal class FollowCoRoutine
 
     private static async SyncTask<bool> FollowUsingPortalOrTpButton(PartyElement leaderPE)
     {
-        var portal = GetBestPortalLabel();
-        const int threshold = 1000;
-        var distanceToPortal = portal != null ? _player.DistanceTo(portal.ItemOnGround) : threshold + 1;
-        if ((State.IsHideout ||
-                (State.AreaName.Equals("The Temple of Chaos") && leaderPE.ZoneName.Equals("The Trial of Chaos")
-            )) && distanceToPortal <= threshold)
-        { // if in hideout and near the portal
-            await SyncInput.LClick(portal.ItemOnGround, 10);
-            if (leaderPE?.TpButton != null && GetTpConfirmation() != null) await SyncInput.PressKey(Keys.Escape);
-        }
-        else if (leaderPE?.TpButton != null)
+        try
         {
-            await SyncInput.LClick(leaderPE.GetTpButtonPosition(), 10);
-
-            if (leaderPE.TpButton != null)
-            { // check if the tp confirmation is open
-                var tpConfirmation = GetTpConfirmation();
-                if (tpConfirmation != null) await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
+            var portal = GetBestPortalLabel();
+            const int threshold = 1000;
+            var distanceToPortal = portal != null ? _player.DistanceTo(portal.ItemOnGround) : threshold + 1;
+            if ((State.IsHideout ||
+                    (State.AreaName.Equals("The Temple of Chaos") && leaderPE.ZoneName.Equals("The Trial of Chaos")
+                )) && distanceToPortal <= threshold)
+            { // if in hideout and near the portal
+                await SyncInput.LClick(portal.ItemOnGround, 10);
+                if (leaderPE?.TpButton != null && GetTpConfirmation() != null) await SyncInput.PressKey(Keys.Escape);
             }
-            await Task.Delay(1000);
+            else if (leaderPE?.TpButton != null)
+            {
+                await SyncInput.LClick(leaderPE.GetTpButtonPosition(), 10);
+
+                if (leaderPE.TpButton != null)
+                { // check if the tp confirmation is open
+                    var tpConfirmation = GetTpConfirmation();
+                    if (tpConfirmation != null) await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
+                }
+                await Task.Delay(1000);
+            }
+            return true;
         }
-        return true;
+        catch (Exception e)
+        {
+            Log.Error($"Error in FollowUsingPortalOrTpButton: {e.Message}");
+            return false;
+        }
     }
 
     private static LabelOnGround GetBestPortalLabel()
@@ -146,8 +154,9 @@ internal class FollowCoRoutine
                 ? portalLabels?[random.Next(portalLabels.Count)]
                 : portalLabels?.FirstOrDefault();
         }
-        catch
+        catch (Exception e)
         {
+            Log.Error("Error in GetBestPortalLabel: " + e.Message);
             return null;
         }
     }

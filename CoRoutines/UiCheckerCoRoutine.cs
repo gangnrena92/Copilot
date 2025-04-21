@@ -38,9 +38,8 @@ internal class UiCheckerCoRoutine
             if (State.IsHideout && Inventory.Items.Count != 0) continue;
 
             // Check if has resurrect UI open
-            var resurrectPanel = IngameUi.ResurrectPanel;
-            if (UiCheckerSettings.AutoRespawn && resurrectPanel != null && resurrectPanel.IsVisible) {
-                var btn = resurrectPanel?.ResurrectAtCheckpoint ?? resurrectPanel?.ResurrectInTown; // if inTown is null, use atCheckpoint
+            if (UiCheckerSettings.AutoRespawn && ResurrectPanel != null && ResurrectPanel.IsVisible) {
+                var btn = ResurrectPanel?.ResurrectAtCheckpoint ?? ResurrectPanel?.ResurrectInTown; // if inTown is null, use atCheckpoint
                 if (btn != null && btn.IsVisible) {
                     await SyncInput.LClick(btn.GetClientRectCache.Center, 10);
                 }

@@ -22,6 +22,8 @@ public static class Ui
 
     public static Camera Camera => IngameState.Camera;
 
+    public static ResurrectPanel ResurrectPanel => IngameUi.ResurrectPanel;
+
     public static Element GetTpConfirmation()
     {
         try
