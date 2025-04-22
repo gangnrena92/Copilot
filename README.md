@@ -1,39 +1,45 @@
 # Copilot
-This plugin is a fork of the original [copilot](https://github.com/totalschaden/copilot), updated to work with PoE2.
+A plugin forked from the original [copilot](https://github.com/totalschaden/copilot), now updated to work with PoE2.
 
-Although this plugin originates from the original, it has been rewritten with changes to its logic handling.
-Additionally, some features from the original have not been implemented and are not planned for future updates.
+While this plugin shares its roots with the original, much of the logic has been rewritten.
+Some features from the original version have been intentionally left out and are not planned for future updates.
 
-It also incorporates some base code from [FollowLad](https://github.com/AlphaCaster/FollowLad).
-
-## Features
+## Features ✨
+- [x] Fully coroutine-based for significantly better performance
 - [x] Follow the player
-- [x] Pass through portals
-- [x] Use blink to catch up (if the target gets too far away)
-- [x] Close UIs (such as chests, crafting tables, etc.) if clicked accidentally
-- [x] Auto-respawn (will attempt to respawn, unless another player is on the map)
+- [x] Passes through portals
+- [x] Uses blink to catch up when the target gets too far
+- [x] Closes UIs (probably not needed if you use the Walk with Key)
+- [x] Auto-respawn (tries to respawn unless another player is on the map)
 - [x] Pick-up items
-- [ ] Use skills
+- [x] Dump items into the guild stash (optional)
+- [x] Use skills (using your own custom snippets)
 
-## Settings
+> ⚠️ I'm currently pursuing my Master's degree, so I don’t always have a ton of time to work on new features.<br>
+> That said, I do try to fix bugs quickly — usually within a day of being reported.<br>
+> Thanks in advance for your patience and understanding!  
+>  
+> 💡 Still, if you have a feature request, feel free to [open an issue](https://github.com/Curvu/Copilot/issues) and tag it as a suggestion — just know it might take a bit!
+
+## Settings ⚙️
 The default settings are configured to suit **my** needs and may not work for you.
-Please **do not** open an issue if the plugin isn't working due to your settings.
+Please **do not** open issues if the plugin doesn't work due to your custom configuration.
 
-## Tips
+## Tips 💡
 - **DO NOT** use checkpoints.
 - When the target passes through a portal, they should wait nearby so the bot can detect them upon loading.
 - If you're moving too fast, it's your fault the bot isn't keeping up, not the plugin's.
 - It's helpful to zoom out using the [WheresMyZoomAt](https://github.com/doubleespressobro/WheresMyZoomAt-PoE2) plugin. (But not too much)
-- I recommend placing the Waypoint and Map Device close to each other.
 - Since the bot picks up everything, it's best to use a [good loot filter](https://www.filterblade.xyz/?game=Poe2) for the pick-up items feature.
 
-## Known bugs
+## Known bugs 🐞
 - May experience issues in "ARENA".
-- Please someone help me fix the snippet system... it doesn't allow me to use async/await, and I don't know how to fix it.
+- The snippet system doesn’t support `async/await`, and I haven’t figured out how to fix that yet — any help is appreciated.
+- I usually push updates within a day of a bug report, so please don’t hesitate to [report issues](https://github.com/Curvu/Copilot/issues)!
 
-## Custom snippets
+## Custom snippets 🧩
 
-Example for a Curse bot.
+### Example for a Curse bot
 ```csharp
 if (globals.Target == null) return "No target";
 if (globals.Player.DistanceTo(globals.Target) > 1000) return "Too far from target"; 
@@ -50,7 +56,7 @@ SyncInput.KeyPress(Keys.Q);
 return "Action completed!";
 ```
 
-Example for a shock bot.
+### Example for a shock bot
 ```csharp
 var monster = Entities
   .NearbyMonsters(EntityRarity.AtLeastRare, 1000, additionalFilters: e => e.IsAlive)
@@ -74,7 +80,12 @@ if (ball != null)
 return "Action completed!";
 ```
 
-## Donations
+## Donations 🙏
+
+If you enjoy the plugin and want to support development, consider donating!
+Your support helps keep the project alive and lets me spend more time improving it.
+
+I’m grateful for any amount. Thank you!
 
 <div style="display: flex;align-items: center;justify-content: center;flex-direction: column;">
   <a href="https://www.paypal.com/donate/?hosted_button_id=NX4PVU9B2YFDU">
