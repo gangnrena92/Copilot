@@ -4,12 +4,8 @@ using System.Numerics;
 using System.Windows.Forms;
 using System.Threading.Tasks;
 
-using ExileCore2;
 using ExileCore2.PoEMemory.Elements;
-using ExileCore2.PoEMemory.MemoryObjects;
-using ExileCore2.PoEMemory.Components;
 using ExileCore2.Shared;
-using ExileCore2.Shared.Enums;
 
 using static Copilot.Copilot;
 using static Copilot.Api.Ui;
@@ -69,7 +65,6 @@ internal class FollowCoRoutine
             // check if the distance of the target changed significantly from the last position OR if there is a boss near and the distance is less than 2000
             if (distanceToTarget > 3000)
             {
-                if (!State.IsTown && !State.IsHideout) continue;
                 var portal = GetBestPortalLabel();
                 if (portal == null) continue;
                 await SyncInput.LClick(portal.ItemOnGround, 300);
@@ -104,14 +99,18 @@ internal class FollowCoRoutine
 
     private static async SyncTask<bool> FollowUsingPortalOrTpButton(PartyElement leaderPE)
     {
+        var allowedToUsePortalAreas = new[] {
+            "The Temple of Chaos",
+            "The Trial of Chaos",
+            "The Halani Gates"
+        };
+
         try
         {
             var portal = GetBestPortalLabel();
             const int threshold = 1000;
             var distanceToPortal = portal != null ? _player.DistanceTo(portal.ItemOnGround) : threshold + 1;
-            if ((State.IsHideout ||
-                    (State.AreaName.Equals("The Temple of Chaos") && leaderPE.ZoneName.Equals("The Trial of Chaos")
-                )) && distanceToPortal <= threshold)
+            if ((State.IsHideout || allowedToUsePortalAreas.Contains(State.AreaName)) && distanceToPortal <= threshold)
             { // if in hideout and near the portal
                 await SyncInput.LClick(portal.ItemOnGround, 10);
                 if (leaderPE?.TpButton != null && GetTpConfirmation() != null) await SyncInput.PressKey(Keys.Escape);
@@ -127,6 +126,10 @@ internal class FollowCoRoutine
                 }
                 await Task.Delay(1000);
             }
+            else
+            {
+                return false;
+            }
             return true;
         }
         catch (Exception e)
@@ -138,14 +141,12 @@ internal class FollowCoRoutine
 
     private static LabelOnGround GetBestPortalLabel()
     {
+        var validLabels = new[] { "portal", "areatransition", "ultimatumentrance", "bosstransition" };
         try
         {
             var portalLabels =
-                IngameUi.ItemsOnGroundLabelsVisible?.Where(
-                        x => x.ItemOnGround.Metadata.ToLower().Contains("areatransition")
-                            || x.ItemOnGround.Metadata.ToLower().Contains("portal")
-                            || x.ItemOnGround.Metadata.ToLower().EndsWith("ultimatumentrance")
-                        )
+                IngameUi.ItemsOnGroundLabelsVisible?
+                    .Where(x => validLabels.Any(label => x.ItemOnGround.Metadata.ToLower().Contains(label)))
                     .OrderBy(x => Vector3.Distance(lastTargetPosition, x.ItemOnGround.Pos)).ToList();
 
             var random = new Random();
