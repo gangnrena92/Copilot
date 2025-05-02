@@ -147,6 +147,8 @@ internal class FollowCoRoutine
                     if (tpConfirmation != null)
                         await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
                 }
+
+                await SyncInput.Delay(1000);
             }
             else
             {
