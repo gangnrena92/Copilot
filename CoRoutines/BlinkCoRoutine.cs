@@ -35,9 +35,8 @@ internal class BlinkCoRoutine
         while (true)
         {
             await SyncInput.Delay(BlinkSettings.Cooldown);
-            if (!Main.AllowBlinkTask || _player.DistanceTo(_target) < BlinkSettings.Range) continue;
+            if (_player.DistanceTo(_target) < BlinkSettings.Range) continue;
             Log.Message("Blinking...");
-            Main.AllowBlinkTask = false;
             await SyncInput.PressKey(Keys.Space);
         }
     }

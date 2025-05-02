@@ -62,7 +62,7 @@ internal class FollowCoRoutine
                 }
 
                 if (State.IsTown || (State.IsHideout && Settings.Tasks.IsDumperEnabled && Api.Inventory.Items.Count != 0)) continue;
-                var distanceToTarget = _player.DistanceTo(_target.Entity);
+                var distanceToTarget = _player.DistanceTo(_target);
 
                 // If within the follow distance, do nothing
                 if (distanceToTarget <= Settings.FollowDistance) continue;
@@ -87,7 +87,6 @@ internal class FollowCoRoutine
                     }
 
                     await MoveToward();
-                    Main.AllowBlinkTask = true;
                 }
             }
             catch (Exception e)
@@ -145,7 +144,8 @@ internal class FollowCoRoutine
                 if (leaderPE.TpButton != null)
                 { // check if the tp confirmation is open
                     var tpConfirmation = GetTpConfirmation();
-                    if (tpConfirmation != null) await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
+                    if (tpConfirmation != null)
+                        await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
                 }
                 await SyncInput.Delay(2000);
             }

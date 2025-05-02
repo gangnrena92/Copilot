@@ -27,7 +27,6 @@ public sealed class Copilot : BaseSettingsPlugin<CopilotSettings>
     public static Copilot Main;
     public LoggerPlus Log => new LoggerPlus("Core");
 
-    public bool AllowBlinkTask = false;
     public bool RessurectedRecently = false;
     public ushort TpTries = 0;
 
