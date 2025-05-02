@@ -131,15 +131,14 @@ internal class FollowCoRoutine
             const int threshold = 1000;
             var distanceToPortal = portal != null ? _player.DistanceTo(portal.ItemOnGround) : threshold + 1;
             if ((State.IsHideout || allowedToUsePortalAreas.Contains(State.AreaName)) && distanceToPortal <= threshold)
-            { // if in hideout and near the portal
-                await SyncInput.LClick(portal.ItemOnGround, 10);
-                if (leaderPE?.TpButton != null && GetTpConfirmation() != null) await SyncInput.PressKey(Keys.Escape);
+            { // if in hideout or in the allowed areas and close to the portal
+                await SyncInput.LClick(portal.ItemOnGround, 1000);
             }
             else if (leaderPE?.TpButton != null)
             {
                 if (Main.TpTries++ > 3) return false;
 
-                await SyncInput.LClick(leaderPE.GetTpButtonPosition(), 500);
+                await SyncInput.LClick(leaderPE.GetTpButtonPosition(), 10);
 
                 if (leaderPE.TpButton != null)
                 { // check if the tp confirmation is open
@@ -147,7 +146,6 @@ internal class FollowCoRoutine
                     if (tpConfirmation != null)
                         await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
                 }
-                await SyncInput.Delay(2000);
             }
             else
             {
@@ -171,7 +169,7 @@ internal class FollowCoRoutine
                 IngameUi.ItemsOnGroundLabelsVisible?
                     .Where(x => validLabels.Any(label => x.ItemOnGround.Metadata.ToLower().Contains(label)))
                     .OrderBy(x => Vector3.Distance(lastTargetPosition, x.ItemOnGround.Pos)).FirstOrDefault();
-            return portalLabel ?? null;
+            return portalLabel;
         }
         catch (Exception e)
         {
