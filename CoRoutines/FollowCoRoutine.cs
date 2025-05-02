@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Numerics;
 using System.Windows.Forms;
-using System.Threading.Tasks;
 
 using ExileCore2.PoEMemory.Elements;
 using ExileCore2.Shared;
@@ -80,10 +79,9 @@ internal class FollowCoRoutine
                 {
                     if (Main.RessurectedRecently)
                     {
-                        if (distanceToTarget < 1500)
+                        if (distanceToTarget < 600)
                             Main.RessurectedRecently = false;
-                        else
-                            continue;
+                        continue;
                     }
 
                     await MoveToward();
@@ -133,7 +131,6 @@ internal class FollowCoRoutine
             if ((State.IsHideout || allowedToUsePortalAreas.Contains(State.AreaName)) && distanceToPortal <= threshold)
             { // if in hideout or in the allowed areas and close to the portal
                 await SyncInput.LClick(portal.ItemOnGround, 1000);
-                if (leaderPE?.TpButton != null && GetTpConfirmation() != null) await SyncInput.PressKey(Keys.Escape);
             }
             else if (leaderPE?.TpButton != null)
             {
@@ -172,7 +169,7 @@ internal class FollowCoRoutine
                 IngameUi.ItemsOnGroundLabelsVisible?
                     .Where(x => validLabels.Any(label => x.ItemOnGround.Metadata.ToLower().Contains(label)))
                     .OrderBy(x => Vector3.Distance(lastTargetPosition, x.ItemOnGround.Pos)).FirstOrDefault();
-            return portalLabel ?? null;
+            return portalLabel;
         }
         catch (Exception e)
         {

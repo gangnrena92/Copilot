@@ -24,9 +24,9 @@ public static class SyncInput
     public static async SyncTask<bool> PressKey(Keys key)
     {
         Input.KeyDown(key);
-        await SyncInput.Delay(10);
+        await Delay(10);
         Input.KeyUp(key);
-        await SyncInput.Delay(10);
+        await Delay(10);
 
         return true;
     }
@@ -40,7 +40,7 @@ public static class SyncInput
     public static async SyncTask<bool> MoveMouse(object entityOrPos, int afterDelay)
     {
         MoveMouse(entityOrPos);
-        await SyncInput.Delay(afterDelay);
+        await Delay(afterDelay);
         return true;
     }
 
@@ -59,17 +59,12 @@ public static class SyncInput
         Input.MouseMove();
     }
 
-    public static async SyncTask<bool> LClick(object entityOrPos, int afterDelay)
+    public static async SyncTask<bool> LClick(object entityOrPos, int afterDelay = 10)
     {
-        LClick(entityOrPos);
-        await SyncInput.Delay(afterDelay);
-        return true;
-    }
-
-    public static void LClick(object entityOrPos)
-    {
-        MoveMouse(entityOrPos, 10);
+        await MoveMouse(entityOrPos, afterDelay);
         Input.Click(MouseButtons.Left);
+        await Delay(afterDelay);
+        return true;
     }
 
     public static async SyncTask<bool> Delay(int delay)

@@ -40,6 +40,7 @@ internal class UiCheckerCoRoutine
             // Check if has resurrect UI open
             if (UiCheckerSettings.AutoRespawn && ResurrectPanel != null && ResurrectPanel.IsVisible) {
                 var btn = ResurrectPanel?.ResurrectAtCheckpoint ?? ResurrectPanel?.ResurrectInTown; // if inTown is null, use atCheckpoint
+                if (GetTpConfirmation() != null) await SyncInput.PressKey(Keys.Escape);
                 if (btn != null && btn.IsVisible) {
                     await SyncInput.LClick(btn.GetClientRectCache.Center, 10);
                     Main.RessurectedRecently = true;
