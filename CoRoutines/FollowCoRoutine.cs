@@ -128,8 +128,6 @@ internal class FollowCoRoutine
 
         try
         {
-            if (Main.TpTries++ > 3) return false;
-
             var portal = GetBestPortalLabel();
             const int threshold = 1000;
             var distanceToPortal = portal != null ? _player.DistanceTo(portal.ItemOnGround) : threshold + 1;
@@ -140,6 +138,8 @@ internal class FollowCoRoutine
             }
             else if (leaderPE?.TpButton != null)
             {
+                if (Main.TpTries++ > 3) return false;
+
                 await SyncInput.LClick(leaderPE.GetTpButtonPosition(), 500);
 
                 if (leaderPE.TpButton != null)
