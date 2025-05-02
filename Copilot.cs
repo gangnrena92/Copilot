@@ -28,6 +28,8 @@ public sealed class Copilot : BaseSettingsPlugin<CopilotSettings>
     public LoggerPlus Log => new LoggerPlus("Core");
 
     public bool AllowBlinkTask = false;
+    public bool RessurectedRecently = false;
+    public ushort TpTries = 0;
 
     public static EntityWrapper _target;
     public static EntityWrapper _player;
@@ -97,6 +99,7 @@ public sealed class Copilot : BaseSettingsPlugin<CopilotSettings>
     {
         lastTargetPosition = Vector3.Zero;
         _target = null;
+        TpTries = 0;
         base.AreaChange(area);
     }
 

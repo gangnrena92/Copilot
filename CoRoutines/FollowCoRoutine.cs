@@ -38,41 +38,62 @@ internal class FollowCoRoutine
     {
         while (true)
         {
-            await Task.Delay(Settings.ActionCooldown);
+            await SyncInput.Delay(Settings.ActionCooldown);
 
-            // If paused, disabled, or not ready for the next action, do nothing
-            if (_player == null || State.IsLoading || Ui.ResurrectPanel.IsVisible) continue;
-
-            var leaderPE = GetLeaderPartyElement();
-
-            // If the target is not found, or the player is not in the same zone
-            if (_target == null)
+            try
             {
-                Log.Message("Target not found, trying to follow the leader...");
-                if (leaderPE != null && !leaderPE.ZoneName.Equals(State.AreaName))
-                    await FollowUsingPortalOrTpButton(leaderPE);
+                // If paused, disabled, or not ready for the next action, do nothing
+                if (_player == null || State.IsLoading || Ui.ResurrectPanel.IsVisible) continue;
+
+                var leaderPE = GetLeaderPartyElement();
+
+                // If the target is not found, or the player is not in the same zone
+                if (_target == null)
+                {
+                    Log.Message("Target not found, trying to follow the leader...");
+                    if (leaderPE != null)
+                    {
+                        if (!leaderPE.ZoneName.Equals(State.AreaName))
+                            await FollowUsingPortalOrTpButton(leaderPE);
+                        else
+                            Main.TpTries = 0;
+                    }
+                    continue;
+                }
+
+                if (State.IsTown || (State.IsHideout && Settings.Tasks.IsDumperEnabled && Api.Inventory.Items.Count != 0)) continue;
+                var distanceToTarget = _player.DistanceTo(_target.Entity);
+
+                // If within the follow distance, do nothing
+                if (distanceToTarget <= Settings.FollowDistance) continue;
+
+                if (lastTargetPosition == Vector3.Zero) lastTargetPosition = _target.Pos;
+
+                // check if the distance of the target changed significantly from the last position
+                if (distanceToTarget > 3000 && !Main.RessurectedRecently)
+                {
+                    var portal = GetBestPortalLabel();
+                    if (portal == null) continue;
+                    await SyncInput.LClick(portal.ItemOnGround, 300);
+                }
+                else
+                {
+                    if (Main.RessurectedRecently)
+                    {
+                        if (distanceToTarget < 1500)
+                            Main.RessurectedRecently = false;
+                        else
+                            continue;
+                    }
+
+                    await MoveToward();
+                    Main.AllowBlinkTask = true;
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Error($"Error in main loop: {e.Message}");
                 continue;
-            }
-
-            if (State.IsTown || (State.IsHideout && Settings.Tasks.IsDumperEnabled && Api.Inventory.Items.Count != 0)) continue;
-            var distanceToTarget = _player.DistanceTo(_target.Entity);
-
-            // If within the follow distance, do nothing
-            if (distanceToTarget <= Settings.FollowDistance) continue;
-
-            if (lastTargetPosition == Vector3.Zero) lastTargetPosition = _target.Pos;
-
-            // check if the distance of the target changed significantly from the last position OR if there is a boss near and the distance is less than 2000
-            if (distanceToTarget > 3000)
-            {
-                var portal = GetBestPortalLabel();
-                if (portal == null) continue;
-                await SyncInput.LClick(portal.ItemOnGround, 300);
-            }
-            else
-            {
-                await MoveToward();
-                Main.AllowBlinkTask = true;
             }
         }
     }
@@ -107,6 +128,8 @@ internal class FollowCoRoutine
 
         try
         {
+            if (Main.TpTries++ > 3) return false;
+
             var portal = GetBestPortalLabel();
             const int threshold = 1000;
             var distanceToPortal = portal != null ? _player.DistanceTo(portal.ItemOnGround) : threshold + 1;
@@ -117,14 +140,14 @@ internal class FollowCoRoutine
             }
             else if (leaderPE?.TpButton != null)
             {
-                await SyncInput.LClick(leaderPE.GetTpButtonPosition(), 10);
+                await SyncInput.LClick(leaderPE.GetTpButtonPosition(), 500);
 
                 if (leaderPE.TpButton != null)
                 { // check if the tp confirmation is open
                     var tpConfirmation = GetTpConfirmation();
                     if (tpConfirmation != null) await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
                 }
-                await Task.Delay(1000);
+                await SyncInput.Delay(2000);
             }
             else
             {
@@ -144,16 +167,11 @@ internal class FollowCoRoutine
         var validLabels = new[] { "portal", "areatransition", "ultimatumentrance", "bosstransition" };
         try
         {
-            var portalLabels =
+            var portalLabel =
                 IngameUi.ItemsOnGroundLabelsVisible?
                     .Where(x => validLabels.Any(label => x.ItemOnGround.Metadata.ToLower().Contains(label)))
-                    .OrderBy(x => Vector3.Distance(lastTargetPosition, x.ItemOnGround.Pos)).ToList();
-
-            var random = new Random();
-
-            return State.IsHideout
-                ? portalLabels?[random.Next(portalLabels.Count)]
-                : portalLabels?.FirstOrDefault();
+                    .OrderBy(x => Vector3.Distance(lastTargetPosition, x.ItemOnGround.Pos)).FirstOrDefault();
+            return portalLabel ?? null;
         }
         catch (Exception e)
         {

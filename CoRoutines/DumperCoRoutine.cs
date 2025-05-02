@@ -38,7 +38,7 @@ internal class DumperCoRoutine
         while (true)
         {
             Log.Message("Dumper Task running...");
-            await Task.Delay(DumperSettings.Cooldown);
+            await SyncInput.Delay(DumperSettings.Cooldown);
             if (!State.IsHideout || Inventory.Items.Count == 0) continue;
 
             var stash = Ui.IngameUi.ItemsOnGroundLabelsVisible
@@ -56,11 +56,11 @@ internal class DumperCoRoutine
             await SyncInput.LClick(tab.GetClientRectCache.Center, 1000);
 
             Input.KeyDown(Keys.ControlKey);
-            await Task.Delay(100);
+            await SyncInput.Delay(100);
             foreach (var item in Inventory.Items)
             {
                 await SyncInput.LClick(item.GetClientRect().Center, 20);
-                await Task.Delay(DumperSettings.ClickDelay);
+                await SyncInput.Delay(DumperSettings.ClickDelay);
             }
             Input.KeyUp(Keys.ControlKey);
         }

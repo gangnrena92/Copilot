@@ -33,7 +33,7 @@ internal class UiCheckerCoRoutine
     {
         while (true)
         {
-            await Task.Delay(UiCheckerSettings.Cooldown);
+            await SyncInput.Delay(UiCheckerSettings.Cooldown);
 
             if (State.IsHideout && Inventory.Items.Count != 0) continue;
 
@@ -42,6 +42,7 @@ internal class UiCheckerCoRoutine
                 var btn = ResurrectPanel?.ResurrectAtCheckpoint ?? ResurrectPanel?.ResurrectInTown; // if inTown is null, use atCheckpoint
                 if (btn != null && btn.IsVisible) {
                     await SyncInput.LClick(btn.GetClientRectCache.Center, 10);
+                    Main.Copilot.RessurectedRecently = true;
                 }
             }
 

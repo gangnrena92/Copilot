@@ -3,6 +3,7 @@ using System.Numerics;
 using ExileCore2.PoEMemory;
 
 namespace Copilot.Classes;
+
 public class PartyElement
 {
     public string PlayerName { get; set; } = string.Empty;

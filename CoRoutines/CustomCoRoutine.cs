@@ -120,7 +120,7 @@ public class CustomCoRoutine
 
         while (true)
         {
-            await Task.Delay(Settings.ActionCooldown);
+            await SyncInput.Delay(Settings.ActionCooldown);
 
             try
             {

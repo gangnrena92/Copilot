@@ -35,7 +35,7 @@ internal class PickUpCoRoutine
     {
         while (true)
         {
-            await Task.Delay(PickupSettings.Delay);
+            await SyncInput.Delay(PickupSettings.Delay);
             if (!(_player.DistanceTo(_target) <= PickupSettings.RangeToIgnore)) continue;
 
             var entity = PickupSettings.UseTargetPosition ? _target : _player;

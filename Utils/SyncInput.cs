@@ -24,9 +24,9 @@ public static class SyncInput
     public static async SyncTask<bool> PressKey(Keys key)
     {
         Input.KeyDown(key);
-        await Task.Delay(10);
+        await SyncInput.Delay(10);
         Input.KeyUp(key);
-        await Task.Delay(10);
+        await SyncInput.Delay(10);
 
         return true;
     }
@@ -40,7 +40,7 @@ public static class SyncInput
     public static async SyncTask<bool> MoveMouse(object entityOrPos, int afterDelay)
     {
         MoveMouse(entityOrPos);
-        await Task.Delay(afterDelay);
+        await SyncInput.Delay(afterDelay);
         return true;
     }
 
@@ -62,7 +62,7 @@ public static class SyncInput
     public static async SyncTask<bool> LClick(object entityOrPos, int afterDelay)
     {
         LClick(entityOrPos);
-        await Task.Delay(afterDelay);
+        await SyncInput.Delay(afterDelay);
         return true;
     }
 
@@ -70,5 +70,14 @@ public static class SyncInput
     {
         MoveMouse(entityOrPos);
         Input.Click(MouseButtons.Left);
+    }
+
+    public static async SyncTask<bool> Delay(int delay)
+    {
+        var settings = Copilot.Main.Settings.Additional;
+        var RandomDelay = new Random();
+        RandomDelay = random.Next(settings.RandomDelayMin, settings.RandomDelayMax);
+        await Task.Delay(delay + RandomDelay);
+        return true;
     }
 }
