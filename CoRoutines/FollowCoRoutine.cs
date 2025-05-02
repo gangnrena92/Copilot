@@ -42,7 +42,7 @@ internal class FollowCoRoutine
             try
             {
                 // If paused, disabled, or not ready for the next action, do nothing
-                if (_player == null || State.IsLoading || Ui.ResurrectPanel.IsVisible) continue;
+                if (_player == null || State.IsLoading || Ui.ResurrectPanel.IsVisible || DontFollow) continue;
 
                 var leaderPE = GetLeaderPartyElement();
 

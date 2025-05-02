@@ -17,8 +17,6 @@ using Copilot.Api;
 // - debug to see like a crosshair
 // TODO: circle people
 // TODO: pots
-// TODO: fix AreaTransition
-// TODO: better pickup filter make it able to use regex
 
 namespace Copilot;
 
@@ -29,6 +27,8 @@ public sealed class Copilot : BaseSettingsPlugin<CopilotSettings>
 
     public bool RessurectedRecently = false;
     public ushort TpTries = 0;
+
+    public static bool DontFollow = false;
 
     public static EntityWrapper _target;
     public static EntityWrapper _player;

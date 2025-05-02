@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using ExileCore2.Shared;

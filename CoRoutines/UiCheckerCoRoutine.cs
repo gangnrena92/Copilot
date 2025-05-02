@@ -1,6 +1,5 @@
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using Copilot.Settings;
+
 using ExileCore2.Shared;
 
 using static Copilot.Copilot;
@@ -8,6 +7,7 @@ using static Copilot.Api.Ui;
 using Copilot.Settings.Tasks;
 using Copilot.Api;
 using Copilot.Utils;
+using Copilot.Settings;
 
 namespace Copilot.CoRoutines;
 
@@ -39,12 +39,17 @@ internal class UiCheckerCoRoutine
 
             // Check if has resurrect UI open
             if (UiCheckerSettings.AutoRespawn && ResurrectPanel != null && ResurrectPanel.IsVisible) {
+                DontFollow = true;
                 var btn = ResurrectPanel?.ResurrectAtCheckpoint ?? ResurrectPanel?.ResurrectInTown; // if inTown is null, use atCheckpoint
                 if (GetTpConfirmation() != null) await SyncInput.PressKey(Keys.Escape);
                 if (btn != null && btn.IsVisible) {
-                    await SyncInput.LClick(btn.GetClientRectCache.Center, 10);
                     Main.RessurectedRecently = true;
+                    await SyncInput.LClick(btn.GetClientRectCache.Center);
                 }
+                _player = null;
+                _target = null;
+                DontFollow = false;
+                await SyncInput.Delay(300);
             }
 
             if (IsAnyUiOpen())
