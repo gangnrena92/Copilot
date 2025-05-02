@@ -62,7 +62,7 @@ internal class FollowCoRoutine
                 }
 
                 if (State.IsTown || (State.IsHideout && Settings.Tasks.IsDumperEnabled && Api.Inventory.Items.Count != 0)) continue;
-                var distanceToTarget = _player.DistanceTo(_target);
+                var distanceToTarget = _player.DistanceTo(_target.Entity);
 
                 // If within the follow distance, do nothing
                 if (distanceToTarget <= Settings.FollowDistance) continue;
