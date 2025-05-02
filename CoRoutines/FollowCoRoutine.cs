@@ -133,6 +133,7 @@ internal class FollowCoRoutine
             if ((State.IsHideout || allowedToUsePortalAreas.Contains(State.AreaName)) && distanceToPortal <= threshold)
             { // if in hideout or in the allowed areas and close to the portal
                 await SyncInput.LClick(portal.ItemOnGround, 1000);
+                if (leaderPE?.TpButton != null && GetTpConfirmation() != null) await SyncInput.PressKey(Keys.Escape);
             }
             else if (leaderPE?.TpButton != null)
             {
