@@ -75,9 +75,9 @@ public static class SyncInput
     public static async SyncTask<bool> Delay(int delay)
     {
         var settings = Copilot.Main.Settings.Additional;
-        var RandomDelay = new Random();
-        RandomDelay = random.Next(settings.RandomDelayMin, settings.RandomDelayMax);
-        await Task.Delay(delay + RandomDelay);
+        var random = new Random();
+        int randomDelay = random.Next(settings.RandomDelayMin, settings.RandomDelayMax);
+        await Task.Delay(delay + randomDelay);
         return true;
     }
 }
