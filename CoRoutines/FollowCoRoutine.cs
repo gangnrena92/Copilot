@@ -169,7 +169,7 @@ internal class FollowCoRoutine
                 IngameUi.ItemsOnGroundLabelsVisible?
                     .Where(x => validLabels.Any(label => x.ItemOnGround.Metadata.ToLower().Contains(label)))
                     .OrderBy(x => Vector3.Distance(lastTargetPosition, x.ItemOnGround.Pos)).FirstOrDefault();
-            return portalLabel;
+            return portalLabel ?? null;
         }
         catch (Exception e)
         {

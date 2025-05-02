@@ -68,7 +68,7 @@ public static class SyncInput
 
     public static void LClick(object entityOrPos)
     {
-        MoveMouse(entityOrPos, 20);
+        MoveMouse(entityOrPos, 10);
         Input.Click(MouseButtons.Left);
     }
 
