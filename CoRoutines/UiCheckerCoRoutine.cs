@@ -41,8 +41,15 @@ internal class UiCheckerCoRoutine
             if (UiCheckerSettings.AutoRespawn && ResurrectPanel != null && ResurrectPanel.IsVisible) {
                 DontFollow = true;
                 var btn = ResurrectPanel?.ResurrectAtCheckpoint ?? ResurrectPanel?.ResurrectInTown; // if inTown is null, use atCheckpoint
-                if (GetTpConfirmation() != null) await SyncInput.PressKey(Keys.Escape);
-                if (btn != null && btn.IsVisible) {
+
+                var tpConfirmation = GetTpConfirmation();
+                if (tpConfirmation != null)
+                {
+                    await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
+                }
+
+                if (btn != null && btn.IsVisible)
+                {
                     Main.RessurectedRecently = true;
                     await SyncInput.LClick(btn.GetClientRectCache.Center);
                 }
