@@ -35,32 +35,39 @@ internal class UiCheckerCoRoutine
         {
             await SyncInput.Delay(UiCheckerSettings.Cooldown);
 
-            if (State.IsHideout && Inventory.Items.Count != 0) continue;
+            try
+            {
+                if (State.IsHideout && Inventory.Items.Count != 0) continue;
 
-            // Check if has resurrect UI open
-            if (UiCheckerSettings.AutoRespawn && ResurrectPanel != null && ResurrectPanel.IsVisible) {
-                DontFollow = true;
-                var btn = ResurrectPanel?.ResurrectAtCheckpoint ?? ResurrectPanel?.ResurrectInTown; // if inTown is null, use atCheckpoint
+                // Check if has resurrect UI open
+                if (UiCheckerSettings.AutoRespawn && ResurrectPanel != null && ResurrectPanel.IsVisible) {
+                    DontFollow = true;
+                    var btn = ResurrectPanel?.ResurrectAtCheckpoint ?? ResurrectPanel?.ResurrectInTown; // if inTown is null, use atCheckpoint
 
-                var tpConfirmation = GetTpConfirmation();
-                if (tpConfirmation != null)
-                {
-                    await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
+                    var tpConfirmation = GetTpConfirmation();
+                    if (tpConfirmation != null)
+                    {
+                        await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
+                    }
+
+                    if (btn != null && btn.IsVisible)
+                    {
+                        Main.RessurectedRecently = true;
+                        await SyncInput.LClick(btn.GetClientRectCache.Center);
+                    }
+                    _player = null;
+                    _target = null;
+                    DontFollow = false;
+                    await SyncInput.Delay(300);
                 }
 
-                if (btn != null && btn.IsVisible)
-                {
-                    Main.RessurectedRecently = true;
-                    await SyncInput.LClick(btn.GetClientRectCache.Center);
-                }
-                _player = null;
-                _target = null;
-                DontFollow = false;
-                await SyncInput.Delay(300);
+                if (IsAnyUiOpen())
+                    await SyncInput.PressKey(Keys.Space);
             }
-
-            if (IsAnyUiOpen())
-                await SyncInput.PressKey(Keys.Space);
+            catch
+            {
+                DontFollow = false;
+            }
         }
     }
 }
