@@ -34,23 +34,29 @@ internal class PickUpCoRoutine
         while (true)
         {
             await SyncInput.Delay(PickupSettings.Delay);
-            if (!(_player.DistanceTo(_target) <= PickupSettings.RangeToIgnore)) continue;
+            try
+            {
+                if (!(_player.DistanceTo(_target) <= PickupSettings.RangeToIgnore)) continue;
 
-            var entity = PickupSettings.UseTargetPosition ? _target : _player;
-            var items = IngameUi.ItemsOnGroundLabelsVisible;
-            if (items == null) continue;
+                var entity = PickupSettings.UseTargetPosition ? _target : _player;
+                var items = IngameUi.ItemsOnGroundLabelsVisible;
+                if (items == null) continue;
 
-            var filteredItems = PickupSettings.Filter.Value.Split(',');
-            var item = items?
-                .OrderBy(x => entity.DistanceTo(x.ItemOnGround))
-                .FirstOrDefault(x => filteredItems.Any(y => x.Label.Text != null && x.Label.Text.Contains(y)));
-            if (item == null) continue;
+                var filteredItems = PickupSettings.Filter.Value.Split(',');
+                var item = items?
+                    .OrderBy(x => entity.DistanceTo(x.ItemOnGround))
+                    .FirstOrDefault(x => filteredItems.Any(y => x.Label.Text != null && x.Label.Text.Contains(y)));
+                if (item == null) continue;
 
-            var distanceToItem = entity.DistanceTo(item.ItemOnGround);
-            if (!(distanceToItem <= PickupSettings.Range)) continue;
+                var distanceToItem = entity.DistanceTo(item.ItemOnGround);
+                if (!(distanceToItem <= PickupSettings.Range)) continue;
 
-            Log.Message("Picking up item: " + item.Label.Text);
-            await SyncInput.LClick(item.ItemOnGround, 10);
+                Log.Message("Picking up item: " + item.Label.Text);
+                await SyncInput.LClick(item.ItemOnGround, 10);
+            }
+            catch
+            {
+            }
         }
     }
 }
