@@ -36,7 +36,7 @@ internal class PickUpCoRoutine
             await SyncInput.Delay(PickupSettings.Delay);
             try
             {
-                if (!(_player.DistanceTo(_target) <= PickupSettings.RangeToIgnore)) continue;
+                if (!(_player.DistanceTo(_target.Entity) <= PickupSettings.RangeToIgnore)) continue;
 
                 var entity = PickupSettings.UseTargetPosition ? _target : _player;
                 var items = IngameUi.ItemsOnGroundLabelsVisible;

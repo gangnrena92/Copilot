@@ -1,3 +1,4 @@
+using System;
 using System.Windows.Forms;
 
 using ExileCore2.Shared;
@@ -34,9 +35,16 @@ internal class BlinkCoRoutine
         while (true)
         {
             await SyncInput.Delay(BlinkSettings.Cooldown);
-            if (_player.DistanceTo(_target) < BlinkSettings.Range) continue;
-            Log.Message("Blinking...");
-            await SyncInput.PressKey(Keys.Space);
+
+            try
+            {
+                if (_player.DistanceTo(_target.Entity) < BlinkSettings.Range) continue;
+                await SyncInput.PressKey(Keys.Space);
+            }
+            catch (Exception e)
+            {
+                Log.Error(e.ToString());
+            }
         }
     }
 }

@@ -47,6 +47,5 @@ public class EntityWrapper
 
     public Vector3 Pos => _entity.Pos;
 
-    public float DistanceTo(EntityWrapper e) => e.DistanceTo(e._entity);
     public float DistanceTo(Entity e) => Vector3.Distance(Pos, e.Pos);
 }

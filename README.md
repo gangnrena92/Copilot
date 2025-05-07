@@ -42,7 +42,7 @@ Please **do not** open issues if the plugin doesn't work due to your custom conf
 ### Example for a Curse bot
 ```csharp
 if (globals.Target == null) return "No target";
-if (globals.Player.DistanceTo(globals.Target) > 1000) return "Too far from target"; 
+if (globals.Player.DistanceTo(globals.Target.Entity) > 1000) return "Too far from target"; 
 
 var monster = Entities
   .NearbyMonsters(additionalFilters: e => e.IsDead)
