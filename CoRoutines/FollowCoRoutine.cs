@@ -2,17 +2,11 @@ using System;
 using System.Linq;
 using System.Numerics;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-
-using ExileCore2.PoEMemory.Elements;
-using ExileCore2.Shared;
-
 using Copilot.Settings;
 using Copilot.Utils;
 using Copilot.Classes;
 using Copilot.Api;
-
 using static Copilot.Copilot;
 using static Copilot.Api.Ui;
 
@@ -23,7 +17,6 @@ namespace Copilot.CoRoutines
         private static CopilotSettings Settings => Main.Settings;
 
         private static LoggerPlus Log = new LoggerPlus("FollowCoRoutine");
-
         private static Vector3 lastTargetPosition = Vector3.Zero;
 
         public static void Init()
@@ -36,11 +29,11 @@ namespace Copilot.CoRoutines
             TaskRunner.Stop("FollowCoRoutine");
         }
 
-        public static async Task<bool> Follow_Task()
+        public static async SyncTask<bool> Follow_Task()
         {
             while (true)
             {
-                await Task.Delay(Settings.ActionCooldown);
+                await SyncInput.Delay(Settings.ActionCooldown);
 
                 try
                 {
@@ -121,7 +114,7 @@ namespace Copilot.CoRoutines
             }
         }
 
-        private static async Task<bool> FollowUsingPortalOrTpButton(PartyElement leaderPE)
+        private static async SyncTask<bool> FollowUsingPortalOrTpButton(PartyElement leaderPE)
         {
             var allowedToUsePortalAreas = new[] {
                 "The Temple of Chaos",
@@ -151,7 +144,7 @@ namespace Copilot.CoRoutines
                             await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
                     }
 
-                    await Task.Delay(1000);
+                    await SyncInput.Delay(1000);
                 }
                 else
                 {
@@ -185,9 +178,9 @@ namespace Copilot.CoRoutines
             }
         }
 
-        private static async Task<bool> MoveToward()
+        private static async SyncTask<bool> MoveToward()
         {
-            if (Settings.Additional.MovementMode == MovementMode.Mouse)
+            if (Settings.Additional.MovementMode == AdditionalSettings.MovementMode.Mouse)
             {
                 if (Settings.Additional.UseMouse)
                     await SyncInput.LClick(_target, 20);
@@ -197,7 +190,7 @@ namespace Copilot.CoRoutines
                     await SyncInput.PressKey(Settings.Additional.FollowKey);
                 }
             }
-            else if (Settings.Additional.MovementMode == MovementMode.WASD)
+            else if (Settings.Additional.MovementMode == AdditionalSettings.MovementMode.WASD)
             {
                 while (true)
                 {
@@ -231,12 +224,12 @@ namespace Copilot.CoRoutines
                     if (key2 != Keys.None) keysToPress.Add(key2);
 
                     foreach (var key in keysToPress)
-                        Input.KeyDown(key);
+                        await SyncInput.KeyDown(key);
 
-                    await Task.Delay(new Random().Next(Settings.Additional.RandomDelayMin, Settings.Additional.RandomDelayMax));
+                    await SyncInput.Delay(new Random().Next(Settings.Additional.RandomDelayMin, Settings.Additional.RandomDelayMax));
 
                     foreach (var key in keysToPress)
-                        Input.KeyUp(key);
+                        await SyncInput.KeyUp(key);
                 }
             }
 
