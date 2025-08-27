@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Windows.Forms;
 using ExileCore2.Shared.Nodes;
 using ExileCore2.Shared.Attributes;
@@ -8,6 +7,7 @@ namespace Copilot.Settings
     [Submenu(CollapsedByDefault = true)]
     public class AdditionalSettings
     {
+        // Enum для выбора режима движения
         public enum MovementMode
         {
             Mouse,
@@ -15,7 +15,7 @@ namespace Copilot.Settings
         }
 
         [Menu("Movement Mode", "Выберите способ передвижения")]
-        public MovementMode MovementMode { get; set; } = MovementMode.Mouse;
+        public MovementMode MovementModeOption { get; set; } = MovementMode.Mouse;
 
         [Menu("Use Mouse to Follow", "Если включено, бот будет кликать по цели мышью (не рекомендуется)")]
         public ToggleNode UseMouse { get; set; } = new ToggleNode(true);
@@ -31,16 +31,5 @@ namespace Copilot.Settings
 
         [Menu("Debug", "Включает режим отладки")]
         public ToggleNode Debug { get; set; } = new ToggleNode(false);
-
-        // Пример корректного ListNode
-        [Menu("Follow Options")]
-        public ListNode<string> FollowOptions { get; set; } = new ListNode<string>();
-
-        // В конструкторе добавляем элементы
-        public AdditionalSettings()
-        {
-            FollowOptions.Add("Option1");
-            FollowOptions.Add("Option2");
-        }
     }
 }

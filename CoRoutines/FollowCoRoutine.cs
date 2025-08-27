@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Numerics;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Copilot.Settings;
 using Copilot.Utils;
@@ -29,11 +29,11 @@ namespace Copilot.CoRoutines
             TaskRunner.Stop("FollowCoRoutine");
         }
 
-        public static async SyncTask<bool> Follow_Task()
+        public static async Task<bool> Follow_Task()
         {
             while (true)
             {
-                await SyncInput.Delay(Settings.ActionCooldown);
+                await Task.Delay(Settings.ActionCooldown);
 
                 try
                 {
@@ -45,13 +45,6 @@ namespace Copilot.CoRoutines
                     if (_target == null)
                     {
                         Log.Message("Target not found, trying to follow the leader...");
-                        if (leaderPE != null)
-                        {
-                            if (!leaderPE.ZoneName.Equals(State.AreaName))
-                                await FollowUsingPortalOrTpButton(leaderPE);
-                            else
-                                Main.TpTries = 0;
-                        }
                         continue;
                     }
 
@@ -59,29 +52,11 @@ namespace Copilot.CoRoutines
                         continue;
 
                     var distanceToTarget = _player.DistanceTo(_target.Entity);
-
-                    if (distanceToTarget <= Settings.FollowDistance)
-                        continue;
+                    if (distanceToTarget <= Settings.FollowDistance) continue;
 
                     if (lastTargetPosition == Vector3.Zero) lastTargetPosition = _target.Pos;
 
-                    if (distanceToTarget > 3000 && !Main.RessurectedRecently)
-                    {
-                        var portal = GetBestPortalLabel();
-                        if (portal == null) continue;
-                        await SyncInput.LClick(portal.ItemOnGround, 300);
-                    }
-                    else
-                    {
-                        if (Main.RessurectedRecently)
-                        {
-                            if (distanceToTarget < 600)
-                                Main.RessurectedRecently = false;
-                            continue;
-                        }
-
-                        await MoveToward();
-                    }
+                    await MoveToward();
                 }
                 catch (Exception e)
                 {
@@ -91,118 +66,26 @@ namespace Copilot.CoRoutines
             }
         }
 
-        private static PartyElement GetLeaderPartyElement()
+        private static async Task<bool> MoveToward()
         {
-            try
-            {
-                var partyElementList = IngameUi.PartyElement.Children?[0]?.Children;
-                var leader = partyElementList?.FirstOrDefault(partyElement =>
-                    partyElement?.Children?[0]?.Children?[0]?.Text?.ToLower() ==
-                    Settings.TargetPlayerName.Value.ToLower());
-
-                var leaderPartyElement = new PartyElement
-                {
-                    PlayerName = leader?.Children?[0]?.Children?[0]?.Text,
-                    TpButton = leader?.Children?[4],
-                    ZoneName = leader?.Children?[3]?.Text ?? State.AreaName
-                };
-                return leaderPartyElement;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private static async SyncTask<bool> FollowUsingPortalOrTpButton(PartyElement leaderPE)
-        {
-            var allowedToUsePortalAreas = new[] {
-                "The Temple of Chaos",
-                "The Trial of Chaos",
-                "The Halani Gates"
-            };
-
-            try
-            {
-                var portal = GetBestPortalLabel();
-                const int threshold = 1000;
-                var distanceToPortal = portal != null ? _player.DistanceTo(portal.ItemOnGround) : threshold + 1;
-                if ((State.IsHideout || allowedToUsePortalAreas.Contains(State.AreaName)) && distanceToPortal <= threshold)
-                {
-                    await SyncInput.LClick(portal.ItemOnGround, 1000);
-                }
-                else if (leaderPE?.TpButton != null)
-                {
-                    if (Main.TpTries++ > 3) return false;
-
-                    await SyncInput.LClick(leaderPE.GetTpButtonPosition(), 10);
-
-                    if (leaderPE.TpButton != null)
-                    {
-                        var tpConfirmation = GetTpConfirmation();
-                        if (tpConfirmation != null)
-                            await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
-                    }
-
-                    await SyncInput.Delay(1000);
-                }
-                else
-                {
-                    return false;
-                }
-                return true;
-            }
-            catch (Exception e)
-            {
-                Log.Error($"Error in FollowUsingPortalOrTpButton: {e.Message}");
-                return false;
-            }
-        }
-
-        private static LabelOnGround GetBestPortalLabel()
-        {
-            var validLabels = new[] { "portal", "areatransition", "ultimatumentrance", "bosstransition" };
-            try
-            {
-                var portalLabel =
-                    IngameUi.ItemsOnGroundLabelsVisible?
-                        .Where(x => validLabels.Any(label => x.ItemOnGround.Metadata.ToLower().Contains(label)))
-                        .OrderBy(x => Vector3.Distance(lastTargetPosition, x.ItemOnGround.Pos))
-                        .FirstOrDefault();
-                return portalLabel;
-            }
-            catch (Exception e)
-            {
-                Log.Error("Error in GetBestPortalLabel: " + e.Message);
-                return null;
-            }
-        }
-
-        private static async SyncTask<bool> MoveToward()
-        {
-            if (Settings.Additional.MovementMode == AdditionalSettings.MovementMode.Mouse)
+            if (Settings.Additional.MovementModeOption == AdditionalSettings.MovementMode.Mouse)
             {
                 if (Settings.Additional.UseMouse)
                     await SyncInput.LClick(_target, 20);
                 else
-                {
-                    await SyncInput.MoveMouse(_target, 10);
                     await SyncInput.PressKey(Settings.Additional.FollowKey);
-                }
             }
-            else if (Settings.Additional.MovementMode == AdditionalSettings.MovementMode.WASD)
+            else if (Settings.Additional.MovementModeOption == AdditionalSettings.MovementMode.WASD)
             {
                 while (true)
                 {
-                    if (_player == null || _target == null)
-                        break;
+                    if (_player == null || _target == null) break;
 
                     var playerPos = _player.Pos;
                     var targetPos = _target.Pos;
 
                     var direction = targetPos - playerPos;
                     var distance = direction.Length();
-
                     if (distance < 0.5f) break;
 
                     double angle = Math.Atan2(direction.Y, direction.X) * (180 / Math.PI);
@@ -219,17 +102,13 @@ namespace Copilot.CoRoutines
                     else if (angle >= -112.5 && angle < -67.5) key1 = Keys.S;
                     else if (angle >= -67.5 && angle < -22.5) { key1 = Keys.S; key2 = Keys.D; }
 
-                    var keysToPress = new List<Keys>();
-                    if (key1 != Keys.None) keysToPress.Add(key1);
-                    if (key2 != Keys.None) keysToPress.Add(key2);
+                    if (key1 != Keys.None) await SyncInput.KeyDown(key1);
+                    if (key2 != Keys.None) await SyncInput.KeyDown(key2);
 
-                    foreach (var key in keysToPress)
-                        await SyncInput.KeyDown(key);
+                    await Task.Delay(new Random().Next(Settings.Additional.RandomDelayMin, Settings.Additional.RandomDelayMax));
 
-                    await SyncInput.Delay(new Random().Next(Settings.Additional.RandomDelayMin, Settings.Additional.RandomDelayMax));
-
-                    foreach (var key in keysToPress)
-                        await SyncInput.KeyUp(key);
+                    if (key1 != Keys.None) await SyncInput.KeyUp(key1);
+                    if (key2 != Keys.None) await SyncInput.KeyUp(key2);
                 }
             }
 
