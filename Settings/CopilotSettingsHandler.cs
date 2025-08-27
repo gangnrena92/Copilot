@@ -33,7 +33,7 @@ public class CopilotSettingsHandler
         }
         catch (Exception ex)
         {
-            Log.Error("Error drawing party list: " + ex.Message);
+            Log.Error($"Error drawing party list: {ex.Message}");
         }
     }
 
@@ -45,7 +45,7 @@ public class CopilotSettingsHandler
         }
         catch (Exception ex)
         {
-            Log.Error("Error drawing guild stash dropdown: " + ex.Message);
+            Log.Error($"Error drawing guild stash dropdown: {ex.Message}");
         }
     }
 
@@ -92,7 +92,7 @@ public class CopilotSettingsHandler
         }
         catch (Exception ex)
         {
-            Log.Error("Error drawing movement settings: " + ex.Message);
+            Log.Error($"Error drawing movement settings: {ex.Message}");
         }
 
         ImGui.TreePop();
