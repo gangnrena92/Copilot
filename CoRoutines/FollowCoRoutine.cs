@@ -1,134 +1,89 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
-using System.Windows.Forms;
-
-using Copilot.Api;
+using ExileCore2;
+using ExileCore2.PoEMemory.MemoryObjects;
+using ExileCore2.Shared.Attributes;
+using ExileCore2.Shared.Nodes;
 using Copilot.Settings;
+using Copilot.Api;
 
-namespace Copilot.CoRoutines;
-
-public static class FollowCoRoutine
+namespace Copilot.CoRoutines
 {
-    private static Copilot CopilotMain => Copilot.Main;
-    private static AdditionalSettings Additional => CopilotMain.Settings.Additional;
-    private static bool _isRunning = false;
-
-    public static void Init()
+    public static class FollowCoRoutine
     {
-        if (_isRunning) return;
-        _isRunning = true;
-        _ = FollowTask();
-    }
+        private static bool _isRunning;
+        private static Task _followTask;
 
-    public static void Stop()
-    {
-        _isRunning = false;
-    }
-
-    private static async Task FollowTask()
-    {
-        while (_isRunning)
+        public static void Init()
         {
-            try
+            if (_isRunning) return;
+            _isRunning = true;
+            _followTask = Task.Run(FollowLoop);
+        }
+
+        public static void Stop()
+        {
+            _isRunning = false;
+            _followTask?.Wait();
+            _followTask = null;
+        }
+
+        private static async Task FollowLoop()
+        {
+            while (_isRunning)
             {
-                var player = CopilotMain._player;
-                var target = CopilotMain._target;
+                await Task.Delay(Copilot.Main.Settings.ActionCooldown.Value);
+
+                var player = Copilot._player;
+                var target = Copilot._target;
 
                 if (player == null || target == null || State.IsLoading || Ui.ResurrectPanel.IsVisible)
-                {
-                    await Task.Delay(100);
                     continue;
-                }
 
-                // Рассчитываем дистанцию
                 var distance = Vector3.Distance(player.Pos, target.Pos);
 
-                if (distance < 1f)
+                // движение к цели
+                if (distance > Copilot.Main.Settings.FollowDistance.Value)
                 {
-                    await Task.Delay(50);
-                    continue;
+                    MoveToTarget(player, target);
                 }
-
-                if (Additional.IsMouseMode())
-                {
-                    // Движение через мышь
-                    MoveMouseTowards(target.Pos);
-                }
-                else
-                {
-                    // Движение через WASD
-                    MoveWASD(player.Pos, target.Pos);
-                }
-
-                await Task.Delay(50);
             }
-            catch
+        }
+
+        private static void MoveToTarget(EntityWrapper player, EntityWrapper target)
+        {
+            var settings = Copilot.Main.Settings.Additional;
+
+            if (settings.MovementModeOption == AdditionalSettings.MovementMode.Mouse)
             {
-                await Task.Delay(100);
+                var screenPos = Copilot.Main.GameController.IngameState.Camera.WorldToScreen(target.Pos);
+                System.Windows.Forms.Cursor.Position = new System.Drawing.Point((int)screenPos.X, (int)screenPos.Y);
+
+                // эмуляция клика мыши
+                MouseClick();
+            }
+            else // WASD
+            {
+                var direction = target.Pos - player.Pos;
+                PressWASD(direction);
             }
         }
-    }
 
-    private static void MoveMouseTowards(Vector3 targetPos)
-    {
-        var screenPos = CopilotMain.GameController.Camera.WorldToScreen(targetPos);
-        if (screenPos == null) return;
-
-        Cursor.Position = new System.Drawing.Point((int)screenPos.Value.X, (int)screenPos.Value.Y);
-
-        if (Additional.UseMouse)
+        private static void MouseClick()
         {
-            MouseClick();
+            var input = Copilot.Main.GameController.IngameState.IngameUi.Input;
+            input.SetKeyState(System.Windows.Forms.Keys.LButton, true);
+            input.SetKeyState(System.Windows.Forms.Keys.LButton, false);
         }
-        else
+
+        private static void PressWASD(Vector3 direction)
         {
-            SetKeyDown(Additional.FollowKey);
+            var input = Copilot.Main.GameController.IngameState.IngameUi.Input;
+            input.SetKeyState(System.Windows.Forms.Keys.W, direction.Z > 0);
+            input.SetKeyState(System.Windows.Forms.Keys.S, direction.Z < 0);
+            input.SetKeyState(System.Windows.Forms.Keys.A, direction.X < 0);
+            input.SetKeyState(System.Windows.Forms.Keys.D, direction.X > 0);
         }
-    }
-
-    private static void MoveWASD(Vector3 playerPos, Vector3 targetPos)
-    {
-        var direction = targetPos - playerPos;
-        double angle = Math.Atan2(direction.Y, direction.X) * (180 / Math.PI);
-
-        var keysToPress = new List<Keys>();
-
-        if (angle >= -22.5 && angle < 22.5) keysToPress.Add(Keys.D);                // E
-        else if (angle >= 22.5 && angle < 67.5) { keysToPress.Add(Keys.W); keysToPress.Add(Keys.D); } // NE
-        else if (angle >= 67.5 && angle < 112.5) keysToPress.Add(Keys.W);          // N
-        else if (angle >= 112.5 && angle < 157.5) { keysToPress.Add(Keys.W); keysToPress.Add(Keys.A); } // NW
-        else if (angle >= 157.5 || angle < -157.5) keysToPress.Add(Keys.A);        // W
-        else if (angle >= -157.5 && angle < -112.5) { keysToPress.Add(Keys.S); keysToPress.Add(Keys.A); } // SW
-        else if (angle >= -112.5 && angle < -67.5) keysToPress.Add(Keys.S);        // S
-        else if (angle >= -67.5 && angle < -22.5) { keysToPress.Add(Keys.S); keysToPress.Add(Keys.D); } // SE
-
-        foreach (var key in keysToPress)
-            SetKeyDown(key);
-
-        Task.Delay(50).Wait();
-
-        foreach (var key in keysToPress)
-            SetKeyUp(key);
-    }
-
-    private static void MouseClick()
-    {
-        // Симулируем левый клик мыши
-        System.Windows.Forms.MouseButtons button = System.Windows.Forms.MouseButtons.Left;
-        Cursor.Position = Cursor.Position; // обновляем
-        // Можно добавить P/Invoke SendInput для реального клика
-    }
-
-    private static void SetKeyDown(Keys key)
-    {
-        CopilotMain.GameController.Input.SetKeyState(key, true);
-    }
-
-    private static void SetKeyUp(Keys key)
-    {
-        CopilotMain.GameController.Input.SetKeyState(key, false);
     }
 }
