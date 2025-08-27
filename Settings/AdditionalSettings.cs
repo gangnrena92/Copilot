@@ -1,5 +1,5 @@
 using System.Windows.Forms;
-using System.Collections.Generic; // ДОБАВИТЬ ЭТОТ USING
+using System.Collections.Generic;
 
 using ExileCore2.Shared.Nodes;
 using ExileCore2.Shared.Attributes;
@@ -9,10 +9,12 @@ namespace Copilot.Settings;
 [Submenu(CollapsedByDefault = true)]
 public class AdditionalSettings
 {
-    public AdditionalSettings() // ДОБАВИТЬ КОНСТРУКТОР
+    public AdditionalSettings()
     {
-        // Инициализация списка значений для MovementType
-        MovementType.SetListValues(new List<string> { "Follow Key", "WASD", "Mouse Click" });
+        // Правильная инициализация ListNode
+        MovementType = new ListNode();
+        MovementType.Value = "Follow Key";
+        MovementType.Values = new List<string> { "Follow Key", "WASD", "Mouse Click" };
     }
 
     [Menu("Use Mouse to Follow", "This is not recommended.")]
@@ -31,10 +33,7 @@ public class AdditionalSettings
     public ToggleNode Debug { get; set; } = new ToggleNode(false);
     
     [Menu("Movement Type", "Method of movement")]
-    public ListNode MovementType { get; set; } = new ListNode() { Value = "Follow Key" };
-    
-    [Menu("WASD Movement", "Use WASD keys for movement")]
-    public ToggleNode UseWASD { get; set; } = new ToggleNode(false);
+    public ListNode MovementType { get; set; }
     
     [Menu("W Key", "Key for moving forward")]
     public HotkeyNode WKey { get; set; } = new HotkeyNode(Keys.W);

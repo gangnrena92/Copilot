@@ -34,61 +34,93 @@ internal class FollowCoRoutine
     }
 
     public static async SyncTask<bool> Follow_Task()
-{
-    while (true)
     {
-        await SyncInput.Delay(Settings.ActionCooldown);
-
-        try
+        while (true)
         {
-            if (_player == null || _target == null || State.IsLoading || Ui.ResurrectPanel.IsVisible || DontFollow) 
-                continue;
+            await SyncInput.Delay(Settings.ActionCooldown);
 
-            // ... существующая логика поиска цели...
-            
-            if (distanceToTarget <= Settings.FollowDistance) 
-                continue;
+            try
+            {
+                if (_player == null || _target == null || _target.Entity == null || 
+                    State.IsLoading || Ui.ResurrectPanel?.IsVisible == true || DontFollow) 
+                    continue;
 
-            // НОВАЯ СИСТЕМА ПЕРЕМЕЩЕНИЯ
-            if (distanceToTarget > 1000 && !Main.RessurectedRecently)
-            {
-                // Дальняя дистанция - используем порталы/телепорт
-                var portal = GetBestPortalLabel();
-                if (portal != null) 
-                    await SyncInput.LClick(portal.ItemOnGround, 300);
-            }
-            else
-            {
-                // Ближняя дистанция - обычное перемещение
-                if (Main.RessurectedRecently && distanceToTarget < 600)
-                    Main.RessurectedRecently = false;
+                var leaderPE = GetLeaderPartyElement();
+
+                // If the target is not found, or the player is not in the same zone
+                if (_target == null)
+                {
+                    Log.Message("Target not found, trying to follow the leader...");
+                    if (leaderPE != null)
+                    {
+                        if (!leaderPE.ZoneName.Equals(State.AreaName))
+                            await FollowUsingPortalOrTpButton(leaderPE);
+                        else
+                            Main.TpTries = 0;
+                    }
+                    continue;
+                }
+
+                if (State.IsTown || (State.IsHideout && Settings.Tasks.IsDumperEnabled && Api.Inventory.Items.Count != 0)) continue;
                 
-                await SyncInput.MoveToTarget(_target, _player);
+                // ДОБАВЛЯЕМ ОБЪЯВЛЕНИЕ ПЕРЕМЕННОЙ distanceToTarget
+                var distanceToTarget = _player.DistanceTo(_target.Entity);
+
+                // If within the follow distance, do nothing
+                if (distanceToTarget <= Settings.FollowDistance) continue;
+
+                if (lastTargetPosition == Vector3.Zero) lastTargetPosition = _target.Pos;
+
+                // check if the distance of the target changed significantly from the last position
+                if (distanceToTarget > 3000 && !Main.RessurectedRecently)
+                {
+                    var portal = GetBestPortalLabel();
+                    if (portal == null) continue;
+                    await SyncInput.LClick(portal.ItemOnGround, 300);
+                }
+                else
+                {
+                    if (Main.RessurectedRecently)
+                    {
+                        if (distanceToTarget < 600)
+                            Main.RessurectedRecently = false;
+                        continue;
+                    }
+
+                    // Временно используем старый метод MoveToward вместо MoveToTarget
+                    await MoveToward();
+                }
+                
+                lastTargetPosition = _target.Pos;
             }
-            
-            lastTargetPosition = _target.Pos;
-        }
-        catch (Exception e)
-        {
-            Log.Error($"Error in follow loop: {e.Message}");
-            SyncInput.ReleaseMovementKeys();
+            catch (Exception e)
+            {
+                Log.Error($"Error in main loop: {e.Message}");
+                SyncInput.ReleaseMovementKeys();
+                continue;
+            }
         }
     }
-}
 
     private static PartyElement GetLeaderPartyElement()
     {
         try
         {
-            var partyElementList = IngameUi.PartyElement.Children?[0]?.Children;
-            var leader = partyElementList?.FirstOrDefault(partyElement => partyElement?.Children?[0]?.Children?[0]?.Text?.ToLower() == Settings.TargetPlayerName.Value.ToLower());
-            var leaderPartyElement = new PartyElement
+            var partyElementList = IngameUi.PartyElement?.Children?[0]?.Children;
+            var targetName = Settings.TargetPlayerName.Value?.ToLower();
+            if (string.IsNullOrEmpty(targetName)) return null;
+            
+            var leader = partyElementList?.FirstOrDefault(partyElement => 
+                partyElement?.Children?[0]?.Children?[0]?.Text?.ToLower() == targetName);
+                
+            if (leader == null) return null;
+            
+            return new PartyElement
             {
                 PlayerName = leader.Children?[0]?.Children?[0]?.Text,
-                TpButton = leader?.Children?[4],
-                ZoneName = leader.Children[3].Text ?? State.AreaName
+                TpButton = leader.Children?.ElementAtOrDefault(4),
+                ZoneName = leader.Children?.ElementAtOrDefault(3)?.Text ?? State.AreaName
             };
-            return leaderPartyElement;
         }
         catch
         {
@@ -122,7 +154,7 @@ internal class FollowCoRoutine
                 if (leaderPE.TpButton != null)
                 { // check if the tp confirmation is open
                     var tpConfirmation = GetTpConfirmation();
-                    if (tpConfirmation != null)
+                    if (tpConfirmation != null && tpConfirmation.GetClientRectCache != null)
                         await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
                 }
 
@@ -146,10 +178,11 @@ internal class FollowCoRoutine
         var validLabels = new[] { "portal", "areatransition", "ultimatumentrance", "bosstransition" };
         try
         {
-            var portalLabel =
-                IngameUi.ItemsOnGroundLabelsVisible?
-                    .Where(x => validLabels.Any(label => x.ItemOnGround.Metadata.ToLower().Contains(label)))
-                    .OrderBy(x => Vector3.Distance(lastTargetPosition, x.ItemOnGround.Pos)).FirstOrDefault();
+            var portalLabel = IngameUi.ItemsOnGroundLabelsVisible?
+                .Where(x => x?.ItemOnGround?.Metadata != null && 
+                           validLabels.Any(label => x.ItemOnGround.Metadata.ToLower().Contains(label)))
+                .OrderBy(x => Vector3.Distance(lastTargetPosition, x.ItemOnGround.Pos))
+                .FirstOrDefault();
             return portalLabel;
         }
         catch (Exception e)
@@ -161,6 +194,8 @@ internal class FollowCoRoutine
 
     private static async SyncTask<bool> MoveToward()
     {
+        if (_target == null) return false;
+        
         if (Settings.Additional.UseMouse)
         {
             await SyncInput.LClick(_target, 20);
@@ -168,7 +203,7 @@ internal class FollowCoRoutine
         else
         {
             await SyncInput.MoveMouse(_target, 10);
-            await SyncInput.PressKey(Keys.T);
+            await SyncInput.PressKey(Settings.Additional.FollowKey.Value);
         }
         lastTargetPosition = _target.Pos;
         return true;
