@@ -7,29 +7,36 @@ namespace Copilot.Settings
     [Submenu(CollapsedByDefault = true)]
     public class AdditionalSettings
     {
-        // Enum для выбора режима движения
+        // Режим движения: Mouse или WASD
         public enum MovementMode
         {
             Mouse,
             WASD
         }
 
-        [Menu("Movement Mode", "Выберите способ передвижения")]
+        [Menu("Movement Mode", "Выберите способ движения персонажа")]
         public MovementMode MovementModeOption { get; set; } = MovementMode.Mouse;
 
-        [Menu("Use Mouse to Follow", "Если включено, бот будет кликать по цели мышью (не рекомендуется)")]
+        [Menu("Use Mouse to Follow", "Рекомендуется только для режима Mouse")]
+        [VisibleCondition(nameof(IsMouseMode))]
         public ToggleNode UseMouse { get; set; } = new ToggleNode(true);
 
-        [Menu("Follow with Key", "Клавиша для следования, если не используем мышь")]
+        [Menu("Follow Key", "Клавиша для следования (если UseMouse=false)")]
         public HotkeyNode FollowKey { get; set; } = new HotkeyNode(Keys.T);
 
-        [Menu("Random Delay Minimum", "Минимальная задержка между нажатиями клавиш WASD (мс)")]
+        [Menu("Random Delay Minimum")]
         public RangeNode<int> RandomDelayMin { get; set; } = new RangeNode<int>(30, 1, 500);
 
-        [Menu("Random Delay Maximum", "Максимальная задержка между нажатиями клавиш WASD (мс)")]
+        [Menu("Random Delay Maximum")]
         public RangeNode<int> RandomDelayMax { get; set; } = new RangeNode<int>(100, 1, 500);
 
-        [Menu("Debug", "Включает режим отладки")]
+        [Menu("Debug Mode", "Включает вывод отладочной информации")]
         public ToggleNode Debug { get; set; } = new ToggleNode(false);
+
+        // Метод для видимости UseMouse только в режиме Mouse
+        private bool IsMouseMode()
+        {
+            return MovementModeOption == MovementMode.Mouse;
+        }
     }
 }
