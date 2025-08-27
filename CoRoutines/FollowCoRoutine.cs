@@ -3,26 +3,36 @@ using System.Linq;
 using System.Numerics;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
+using ExileCore2;
 using ExileCore2.PoEMemory.MemoryObjects;
-using ExileCore2.Shared;
 
-using Copilot.Settings;
 using Copilot.Api;
-using static Copilot.Copilot;
+using Copilot.Settings;
+using Copilot.Classes;
 
 namespace Copilot.CoRoutines
 {
     internal class FollowCoRoutine
     {
-        private static CopilotSettings Settings => Main.Settings;
-        private static LoggerPlus Log = new LoggerPlus("FollowCoRoutine");
+        private static CopilotSettings Settings => Copilot.Main.Settings;
+        private static EntityWrapper _player => Copilot._player;
+        private static EntityWrapper _target => Copilot._target;
+
         private static Vector3 lastTargetPosition = Vector3.Zero;
 
-        public static void Init() => TaskRunner.Run(Follow_Task, "FollowCoRoutine");
-        public static void Stop() => TaskRunner.Stop("FollowCoRoutine");
+        public static void Init()
+        {
+            Task.Run(Follow_Task);
+        }
 
-        private static async Task<bool> Follow_Task()
+        public static void Stop()
+        {
+            // ничего не делаем, так как задача работает асинхронно
+        }
+
+        private static async Task Follow_Task()
         {
             while (true)
             {
@@ -30,48 +40,45 @@ namespace Copilot.CoRoutines
 
                 try
                 {
-                    if (_player == null || State.IsLoading || Ui.ResurrectPanel.IsVisible || Copilot.DontFollow) 
+                    if (_player == null || State.IsLoading || Ui.ResurrectPanel.IsVisible || Copilot.DontFollow)
                         continue;
 
-                    if (_target == null) continue;
+                    var distanceToTarget = _target != null ? Vector3.Distance(_player.Pos, _target.Pos) : 0;
 
-                    var distanceToTarget = Vector3.Distance(_player.Entity.Pos, _target.Entity.Pos);
-                    if (distanceToTarget <= Settings.FollowDistance) continue;
+                    if (_target == null || distanceToTarget <= Settings.FollowDistance)
+                        continue;
 
                     await MoveToward();
                 }
                 catch (Exception e)
                 {
-                    Log.Error($"Error in Follow_Task: {e.Message}");
+                    Copilot.Main.GameController.LogMessage($"FollowCoRoutine Error: {e.Message}");
                 }
             }
         }
 
         private static async Task MoveToward()
         {
-            var additional = Settings.Additional;
-
-            if (additional.MovementModeOption == AdditionalSettings.MovementMode.Mouse)
+            if (Settings.Additional.MovementMode == AdditionalSettings.MovementModeEnum.Mouse)
             {
-                if (additional.UseMouse)
+                // простое движение мышью
+                if (Settings.Additional.UseMouse)
                 {
-                    // Наведение мыши и клик
-                    var targetPos = _target.Entity.Pos;
-                    GameController.Mouse.MoveCursor(targetPos.X, targetPos.Y);
-                    GameController.Mouse.LeftClick();
+                    // эмуляция клика на цель
+                    var pos = _target.Pos;
+                    Cursor.Position = new System.Drawing.Point((int)pos.X, (int)pos.Y);
+                    MouseClick();
                 }
                 else
                 {
-                    // Следование через клавишу FollowKey
-                    GameController.Keyboard.KeyDown(additional.FollowKey.Value);
-                    await Task.Delay(50);
-                    GameController.Keyboard.KeyUp(additional.FollowKey.Value);
+                    // движение с помощью FollowKey
+                    SendKey(Settings.Additional.FollowKey);
                 }
             }
-            else if (additional.MovementModeOption == AdditionalSettings.MovementMode.WASD)
+            else if (Settings.Additional.MovementMode == AdditionalSettings.MovementModeEnum.WASD)
             {
-                Vector3 playerPos = _player.Entity.Pos;
-                Vector3 targetPos = _target.Entity.Pos;
+                var playerPos = _player.Pos;
+                var targetPos = _target.Pos;
 
                 Vector3 direction = targetPos - playerPos;
                 float distance = direction.Length();
@@ -80,35 +87,64 @@ namespace Copilot.CoRoutines
 
                 double angle = Math.Atan2(direction.Y, direction.X) * (180 / Math.PI);
 
-                List<ExileCore2.Shared.Enums.Keys> keysToPress = new List<ExileCore2.Shared.Enums.Keys>();
+                Keys key1 = Keys.None;
+                Keys key2 = Keys.None;
 
-                if (angle >= -22.5 && angle < 22.5) keysToPress.Add(ExileCore2.Shared.Enums.Keys.D);
-                else if (angle >= 22.5 && angle < 67.5) { keysToPress.Add(ExileCore2.Shared.Enums.Keys.W); keysToPress.Add(ExileCore2.Shared.Enums.Keys.D); }
-                else if (angle >= 67.5 && angle < 112.5) keysToPress.Add(ExileCore2.Shared.Enums.Keys.W);
-                else if (angle >= 112.5 && angle < 157.5) { keysToPress.Add(ExileCore2.Shared.Enums.Keys.W); keysToPress.Add(ExileCore2.Shared.Enums.Keys.A); }
-                else if (angle >= 157.5 || angle < -157.5) keysToPress.Add(ExileCore2.Shared.Enums.Keys.A);
-                else if (angle >= -157.5 && angle < -112.5) { keysToPress.Add(ExileCore2.Shared.Enums.Keys.S); keysToPress.Add(ExileCore2.Shared.Enums.Keys.A); }
-                else if (angle >= -112.5 && angle < -67.5) keysToPress.Add(ExileCore2.Shared.Enums.Keys.S);
-                else if (angle >= -67.5 && angle < -22.5) { keysToPress.Add(ExileCore2.Shared.Enums.Keys.S); keysToPress.Add(ExileCore2.Shared.Enums.Keys.D); }
+                if (angle >= -22.5 && angle < 22.5) key1 = Keys.D;
+                else if (angle >= 22.5 && angle < 67.5) { key1 = Keys.W; key2 = Keys.D; }
+                else if (angle >= 67.5 && angle < 112.5) key1 = Keys.W;
+                else if (angle >= 112.5 && angle < 157.5) { key1 = Keys.W; key2 = Keys.A; }
+                else if (angle >= 157.5 || angle < -157.5) key1 = Keys.A;
+                else if (angle >= -157.5 && angle < -112.5) { key1 = Keys.S; key2 = Keys.A; }
+                else if (angle >= -112.5 && angle < -67.5) key1 = Keys.S;
+                else if (angle >= -67.5 && angle < -22.5) { key1 = Keys.S; key2 = Keys.D; }
 
-                // Удерживаем клавиши до приближения к цели
+                List<Keys> keysToPress = new List<Keys>();
+                if (key1 != Keys.None) keysToPress.Add(key1);
+                if (key2 != Keys.None) keysToPress.Add(key2);
+
                 while (distance > 0.5f)
                 {
                     foreach (var key in keysToPress)
-                        GameController.Keyboard.KeyDown(key);
+                        SendKeyDown(key);
 
                     await Task.Delay(50);
 
                     foreach (var key in keysToPress)
-                        GameController.Keyboard.KeyUp(key);
+                        SendKeyUp(key);
 
-                    playerPos = _player.Entity.Pos;
+                    playerPos = _player.Pos;
                     direction = targetPos - playerPos;
                     distance = direction.Length();
                 }
             }
 
-            lastTargetPosition = _target.Entity.Pos;
+            lastTargetPosition = _target.Pos;
+        }
+
+        private static void MouseClick()
+        {
+            // простая эмуляция клика мыши
+            System.Windows.Forms.Cursor.Position = System.Windows.Forms.Cursor.Position;
+            // Можно добавить P/Invoke SendInput для более точного клика
+        }
+
+        private static void SendKey(Keys key)
+        {
+            SendKeyDown(key);
+            Task.Delay(50).Wait();
+            SendKeyUp(key);
+        }
+
+        private static void SendKeyDown(Keys key)
+        {
+            // P/Invoke или SendKeys
+            System.Windows.Forms.SendKeys.SendWait("{" + key.ToString() + " down}");
+        }
+
+        private static void SendKeyUp(Keys key)
+        {
+            System.Windows.Forms.SendKeys.SendWait("{" + key.ToString() + " up}");
         }
     }
 }
