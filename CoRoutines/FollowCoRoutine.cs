@@ -12,6 +12,7 @@ using Copilot.Api;
 using Copilot.Utils;
 using Copilot.Settings;
 using Copilot.Classes;
+using System.Collections.Generic;
 
 namespace Copilot.CoRoutines;
 
@@ -179,17 +180,42 @@ internal class FollowCoRoutine
     }
 
     private static async SyncTask<bool> MoveToward()
+{
+    if (_target == null || _player == null)
+        return false;
+
+    // Рассчитываем направление к цели
+    var direction = _target.Pos - _player.Pos;
+    direction = Vector3.Normalize(direction);
+
+    // Определяем какие клавиши нажимать на основе направления
+    var keysToPress = GetMovementKeysForDirection(direction);
+
+    // Нажимаем соответствующие клавиши движения
+    foreach (var key in keysToPress)
     {
-        if (Settings.Additional.UseMouse)
-        {
-            await SyncInput.LClick(_target, 20);
-        }
-        else
-        {
-            await SyncInput.MoveMouse(_target, 10);
-            await SyncInput.PressKey(Keys.T);
-        }
-        lastTargetPosition = _target.Pos;
-        return true;
+        await SyncInput.PressKey(key, 100);
     }
+
+    lastTargetPosition = _target.Pos;
+    return true;
+}
+
+private static Keys[] GetMovementKeysForDirection(Vector3 direction)
+{
+    var keys = new System.Collections.Generic.List<Keys>();
+    float threshold = 0.3f;
+
+    if (direction.X > threshold)
+        keys.Add(Keys.D);
+    else if (direction.X < -threshold)
+        keys.Add(Keys.A);
+
+    if (direction.Y > threshold)
+        keys.Add(Keys.W);
+    else if (direction.Y < -threshold)
+        keys.Add(Keys.S);
+
+    return keys.ToArray();
+}
 }
