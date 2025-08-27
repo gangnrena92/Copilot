@@ -5,6 +5,12 @@ using ExileCore2.Shared.Attributes;
 
 namespace Copilot.Settings;
 
+public enum MovementMode
+{
+    Mouse,
+    WASD
+}
+
 [Submenu(CollapsedByDefault = true)]
 public class AdditionalSettings
 {
@@ -12,7 +18,6 @@ public class AdditionalSettings
     public MovementMode MovementMode { get; set; } = MovementMode.Mouse;
 
     [Menu("Use Mouse to Follow", "This is not recommended.")]
-    [VisibleCondition(nameof(IsMouseMode))]
     public ToggleNode UseMouse { get; set; } = new ToggleNode(true);
 
     [Menu("Follow with key")]
@@ -26,10 +31,4 @@ public class AdditionalSettings
 
     [Menu("Debug", "This will enable the debug mode.")]
     public ToggleNode Debug { get; set; } = new ToggleNode(false);
-
-    // Метод, который возвращает true только если выбран режим Mouse
-    private bool IsMouseMode()
-    {
-        return MovementMode == MovementMode.Mouse;
-    }
 }
