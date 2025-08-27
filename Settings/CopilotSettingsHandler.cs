@@ -18,9 +18,10 @@ public class CopilotSettingsHandler
 
     public static void DrawSettings()
     {
-        DrawPartyList();
-        DrawGuildStashDropdown();
-        DrawCustomSettings();
+    DrawPartyList();
+    DrawGuildStashDropdown();
+    DrawMovementSettings(); // НОВОЕ
+    DrawCustomSettings();
     }
 
     public static void DrawPartyList()
@@ -42,7 +43,49 @@ public class CopilotSettingsHandler
             Log.Error("Error drawing guild stash dropdown: " + ex.Message);
         }
     }
+    public static void DrawMovementSettings()
+{
+    if (!ImGui.TreeNode("Movement Settings")) return;
+    
+    // Обновляем список доступных методов перемещения
+    Settings.Additional.MovementType.SetListValues(new List<string> 
+    { 
+        "Follow Key", 
+        "WASD", 
+        "Mouse Click" 
+    });
+    
+    var movementType = Settings.Additional.MovementType.Value;
+    if (ImGui.Combo("Movement Type", ref movementType, Settings.Additional.MovementType.ValuesArray, Settings.Additional.MovementType.ValuesArray.Length))
+    {
+        Settings.Additional.MovementType.Value = movementType;
+    }
+    
+    if (movementType == "WASD")
+    {
+        ImGui.Text("WASD Configuration:");
+        Settings.Additional.WKey.Value = DrawHotkey("W Key", Settings.Additional.WKey.Value);
+        Settings.Additional.AKey.Value = DrawHotkey("A Key", Settings.Additional.AKey.Value);
+        Settings.Additional.SKey.Value = DrawHotkey("S Key", Settings.Additional.SKey.Value);
+        Settings.Additional.DKey.Value = DrawHotkey("D Key", Settings.Additional.DKey.Value);
+    }
+    else if (movementType == "Follow Key")
+    {
+        Settings.Additional.FollowKey.Value = DrawHotkey("Follow Key", Settings.Additional.FollowKey.Value);
+    }
+    
+    ImGui.TreePop();
+}
 
+private static Keys DrawHotkey(string label, Keys currentKey)
+{
+    var key = (int)currentKey;
+    if (ImGui.Combo(label, ref key, Enum.GetNames(typeof(Keys)), Enum.GetValues(typeof(Keys)).Length))
+    {
+        return (Keys)key;
+    }
+    return currentKey;
+}
     public static void DrawCustomSettings()
     {
         if (!ImGui.TreeNode("Custom Tasks")) return;

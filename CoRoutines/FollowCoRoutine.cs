@@ -1,89 +1,176 @@
 using System;
+using System.Linq;
 using System.Numerics;
-using System.Threading.Tasks;
-using ExileCore2;
-using ExileCore2.PoEMemory.MemoryObjects;
-using ExileCore2.Shared.Attributes;
-using ExileCore2.Shared.Nodes;
-using Copilot.Settings;
+using System.Windows.Forms;
+
+using ExileCore2.PoEMemory.Elements;
+using ExileCore2.Shared;
+
+using static Copilot.Copilot;
+using static Copilot.Api.Ui;
 using Copilot.Api;
+using Copilot.Utils;
+using Copilot.Settings;
+using Copilot.Classes;
 
-namespace Copilot.CoRoutines
+namespace Copilot.CoRoutines;
+
+internal class FollowCoRoutine
 {
-    public static class FollowCoRoutine
+    private static CopilotSettings Settings => Main.Settings;
+
+    private static LoggerPlus Log = new LoggerPlus("FollowCoRoutine");
+
+    private static Vector3 lastTargetPosition = Vector3.Zero;
+
+    public static void Init()
     {
-        private static bool _isRunning;
-        private static Task _followTask;
+        TaskRunner.Run(Follow_Task, "FollowCoRoutine");
+    }
 
-        public static void Init()
-        {
-            if (_isRunning) return;
-            _isRunning = true;
-            _followTask = Task.Run(FollowLoop);
-        }
+    public static void Stop()
+    {
+        TaskRunner.Stop("FollowCoRoutine");
+    }
 
-        public static void Stop()
-        {
-            _isRunning = false;
-            _followTask?.Wait();
-            _followTask = null;
-        }
+    public static async SyncTask<bool> Follow_Task()
+{
+    while (true)
+    {
+        await SyncInput.Delay(Settings.ActionCooldown);
 
-        private static async Task FollowLoop()
+        try
         {
-            while (_isRunning)
+            if (_player == null || _target == null || State.IsLoading || Ui.ResurrectPanel.IsVisible || DontFollow) 
+                continue;
+
+            // ... существующая логика поиска цели...
+            
+            if (distanceToTarget <= Settings.FollowDistance) 
+                continue;
+
+            // НОВАЯ СИСТЕМА ПЕРЕМЕЩЕНИЯ
+            if (distanceToTarget > 1000 && !Main.RessurectedRecently)
             {
-                await Task.Delay(Copilot.Main.Settings.ActionCooldown.Value);
+                // Дальняя дистанция - используем порталы/телепорт
+                var portal = GetBestPortalLabel();
+                if (portal != null) 
+                    await SyncInput.LClick(portal.ItemOnGround, 300);
+            }
+            else
+            {
+                // Ближняя дистанция - обычное перемещение
+                if (Main.RessurectedRecently && distanceToTarget < 600)
+                    Main.RessurectedRecently = false;
+                
+                await SyncInput.MoveToTarget(_target, _player);
+            }
+            
+            lastTargetPosition = _target.Pos;
+        }
+        catch (Exception e)
+        {
+            Log.Error($"Error in follow loop: {e.Message}");
+            SyncInput.ReleaseMovementKeys();
+        }
+    }
+}
 
-                var player = Copilot._player;
-                var target = Copilot._target;
+    private static PartyElement GetLeaderPartyElement()
+    {
+        try
+        {
+            var partyElementList = IngameUi.PartyElement.Children?[0]?.Children;
+            var leader = partyElementList?.FirstOrDefault(partyElement => partyElement?.Children?[0]?.Children?[0]?.Text?.ToLower() == Settings.TargetPlayerName.Value.ToLower());
+            var leaderPartyElement = new PartyElement
+            {
+                PlayerName = leader.Children?[0]?.Children?[0]?.Text,
+                TpButton = leader?.Children?[4],
+                ZoneName = leader.Children[3].Text ?? State.AreaName
+            };
+            return leaderPartyElement;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
-                if (player == null || target == null || State.IsLoading || Ui.ResurrectPanel.IsVisible)
-                    continue;
+    private static async SyncTask<bool> FollowUsingPortalOrTpButton(PartyElement leaderPE)
+    {
+        var allowedToUsePortalAreas = new[] {
+            "The Temple of Chaos",
+            "The Trial of Chaos",
+            "The Halani Gates"
+        };
 
-                var distance = Vector3.Distance(player.Pos, target.Pos);
+        try
+        {
+            var portal = GetBestPortalLabel();
+            const int threshold = 1000;
+            var distanceToPortal = portal != null ? _player.DistanceTo(portal.ItemOnGround) : threshold + 1;
+            if ((State.IsHideout || allowedToUsePortalAreas.Contains(State.AreaName)) && distanceToPortal <= threshold)
+            { // if in hideout or in the allowed areas and close to the portal
+                await SyncInput.LClick(portal.ItemOnGround, 1000);
+            }
+            else if (leaderPE?.TpButton != null)
+            {
+                if (Main.TpTries++ > 3) return false;
 
-                // движение к цели
-                if (distance > Copilot.Main.Settings.FollowDistance.Value)
-                {
-                    MoveToTarget(player, target);
+                await SyncInput.LClick(leaderPE.GetTpButtonPosition(), 10);
+
+                if (leaderPE.TpButton != null)
+                { // check if the tp confirmation is open
+                    var tpConfirmation = GetTpConfirmation();
+                    if (tpConfirmation != null)
+                        await SyncInput.LClick(tpConfirmation.GetClientRectCache.Center, 500);
                 }
+
+                await SyncInput.Delay(1000);
             }
-        }
-
-        private static void MoveToTarget(EntityWrapper player, EntityWrapper target)
-        {
-            var settings = Copilot.Main.Settings.Additional;
-
-            if (settings.MovementModeOption == AdditionalSettings.MovementMode.Mouse)
+            else
             {
-                var screenPos = Copilot.Main.GameController.IngameState.Camera.WorldToScreen(target.Pos);
-                System.Windows.Forms.Cursor.Position = new System.Drawing.Point((int)screenPos.X, (int)screenPos.Y);
-
-                // эмуляция клика мыши
-                MouseClick();
+                return false;
             }
-            else // WASD
-            {
-                var direction = target.Pos - player.Pos;
-                PressWASD(direction);
-            }
+            return true;
         }
-
-        private static void MouseClick()
+        catch (Exception e)
         {
-            var input = Copilot.Main.GameController.IngameState.IngameUi.Input;
-            input.SetKeyState(System.Windows.Forms.Keys.LButton, true);
-            input.SetKeyState(System.Windows.Forms.Keys.LButton, false);
+            Log.Error($"Error in FollowUsingPortalOrTpButton: {e.Message}");
+            return false;
         }
+    }
 
-        private static void PressWASD(Vector3 direction)
+    private static LabelOnGround GetBestPortalLabel()
+    {
+        var validLabels = new[] { "portal", "areatransition", "ultimatumentrance", "bosstransition" };
+        try
         {
-            var input = Copilot.Main.GameController.IngameState.IngameUi.Input;
-            input.SetKeyState(System.Windows.Forms.Keys.W, direction.Z > 0);
-            input.SetKeyState(System.Windows.Forms.Keys.S, direction.Z < 0);
-            input.SetKeyState(System.Windows.Forms.Keys.A, direction.X < 0);
-            input.SetKeyState(System.Windows.Forms.Keys.D, direction.X > 0);
+            var portalLabel =
+                IngameUi.ItemsOnGroundLabelsVisible?
+                    .Where(x => validLabels.Any(label => x.ItemOnGround.Metadata.ToLower().Contains(label)))
+                    .OrderBy(x => Vector3.Distance(lastTargetPosition, x.ItemOnGround.Pos)).FirstOrDefault();
+            return portalLabel;
         }
+        catch (Exception e)
+        {
+            Log.Error("Error in GetBestPortalLabel: " + e.Message);
+            return null;
+        }
+    }
+
+    private static async SyncTask<bool> MoveToward()
+    {
+        if (Settings.Additional.UseMouse)
+        {
+            await SyncInput.LClick(_target, 20);
+        }
+        else
+        {
+            await SyncInput.MoveMouse(_target, 10);
+            await SyncInput.PressKey(Keys.T);
+        }
+        lastTargetPosition = _target.Pos;
+        return true;
     }
 }

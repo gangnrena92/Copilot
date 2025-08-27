@@ -75,4 +75,73 @@ public static class SyncInput
         await Task.Delay(delay + randomDelay);
         return true;
     }
+    public static async SyncTask<bool> MoveWithWASD(Vector3 targetPosition, EntityWrapper player)
+    {
+        if (player == null) return false;
+        
+        var direction = targetPosition - player.Pos;
+        direction = Vector3.Normalize(direction);
+        
+        // Определяем основные направления
+        var forward = new Vector3(0, 0, 1); // Предполагаемая ориентация камеры
+        var right = new Vector3(1, 0, 0);
+        
+        var dotForward = Vector3.Dot(direction, forward);
+        var dotRight = Vector3.Dot(direction, right);
+        
+        // Отпускаем все клавиши движения
+        ReleaseMovementKeys();
+        
+        // Нажимаем нужные клавиши based on direction
+        if (Math.Abs(dotForward) > Math.Abs(dotRight))
+        {
+            if (dotForward > 0)
+                Input.KeyDown(Copilot.Main.Settings.Additional.WKey.Value);
+            else
+                Input.KeyDown(Copilot.Main.Settings.Additional.SKey.Value);
+        }
+        else
+        {
+            if (dotRight > 0)
+                Input.KeyDown(Copilot.Main.Settings.Additional.DKey.Value);
+            else
+                Input.KeyDown(Copilot.Main.Settings.Additional.AKey.Value);
+        }
+        
+        await Delay(100);
+        return true;
+    }
+    
+    public static void ReleaseMovementKeys()
+    {
+        var settings = Copilot.Main.Settings.Additional;
+        Input.KeyUp(settings.WKey.Value);
+        Input.KeyUp(settings.AKey.Value);
+        Input.KeyUp(settings.SKey.Value);
+        Input.KeyUp(settings.DKey.Value);
+        Input.KeyUp(settings.FollowKey.Value);
+    }
+    
+    public static async SyncTask<bool> MoveToTarget(EntityWrapper target, EntityWrapper player)
+    {
+        var settings = Copilot.Main.Settings.Additional;
+        
+        switch (settings.MovementType.Value)
+        {
+            case "WASD":
+                return await MoveWithWASD(target.Pos, player);
+                
+            case "Follow Key":
+                await MoveMouse(target, 10);
+                await PressKey(settings.FollowKey.Value);
+                return true;
+                
+            case "Mouse Click":
+                await LClick(target, 20);
+                return true;
+                
+            default:
+                return await MoveWithWASD(target.Pos, player);
+        }
+    }
 }
