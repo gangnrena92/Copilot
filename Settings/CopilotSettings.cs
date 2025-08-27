@@ -24,6 +24,9 @@ public class CopilotSettings : ISettings
     [Menu(null, "~100 as default")]
     public RangeNode<int> ActionCooldown { get; set; } = new RangeNode<int>(100, 50, 20000); // Cooldown in milliseconds
 
+    [Menu("Movement Mode", "Choose how the bot moves (Mouse / WASD)")]
+    public ListNode MovementMode { get; set; } = new ListNode(new List<string> { "Mouse", "WASD" }, "Mouse");
+    
     [Menu("Tasks Settings")]
     public TasksSettings Tasks { get; set; } = new TasksSettings();
 

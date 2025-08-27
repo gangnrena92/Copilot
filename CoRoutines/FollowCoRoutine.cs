@@ -12,7 +12,6 @@ using Copilot.Api;
 using Copilot.Utils;
 using Copilot.Settings;
 using Copilot.Classes;
-using System.Collections.Generic;
 
 namespace Copilot.CoRoutines;
 
@@ -181,41 +180,67 @@ internal class FollowCoRoutine
 
     private static async SyncTask<bool> MoveToward()
 {
-    if (_target == null || _player == null)
-        return false;
-
-    // Рассчитываем направление к цели
-    var direction = _target.Pos - _player.Pos;
-    direction = Vector3.Normalize(direction);
-
-    // Определяем какие клавиши нажимать на основе направления
-    var keysToPress = GetMovementKeysForDirection(direction);
-
-    // Нажимаем соответствующие клавиши движения
-    foreach (var key in keysToPress)
+    if (Settings.Additional.MovementMode == MovementMode.Mouse)
     {
-        await SyncInput.PressKey(key, 100);
+        if (Settings.Additional.UseMouse)
+            await SyncInput.LClick(_target, 20);
+        else
+        {
+            await SyncInput.MoveMouse(_target, 10);
+            await SyncInput.PressKey(Settings.Additional.FollowKey);
+        }
+    }
+    else if (Settings.Additional.MovementMode == MovementMode.WASD)
+    {
+        var playerPos = _player.Position;
+        var targetPos = _target.Pos;
+
+        // Вычисляем вектор к цели
+        var direction = targetPos - playerPos;
+        var distance = direction.Length();
+
+        // Если уже на цели — ничего не делаем
+        if (distance < 0.5f) return true;
+
+        // Вычисляем угол в градусах
+        double angle = Math.Atan2(direction.Y, direction.X) * (180 / Math.PI);
+
+        // Определяем клавиши
+        Keys key1 = Keys.None;
+        Keys key2 = Keys.None;
+
+        if (angle >= -22.5 && angle < 22.5) key1 = Keys.D;                  // E
+        else if (angle >= 22.5 && angle < 67.5) { key1 = Keys.W; key2 = Keys.D; }  // NE
+        else if (angle >= 67.5 && angle < 112.5) key1 = Keys.W;             // N
+        else if (angle >= 112.5 && angle < 157.5) { key1 = Keys.W; key2 = Keys.A; } // NW
+        else if (angle >= 157.5 || angle < -157.5) key1 = Keys.A;           // W
+        else if (angle >= -157.5 && angle < -112.5) { key1 = Keys.S; key2 = Keys.A; } // SW
+        else if (angle >= -112.5 && angle < -67.5) key1 = Keys.S;           // S
+        else if (angle >= -67.5 && angle < -22.5) { key1 = Keys.S; key2 = Keys.D; } // SE
+
+        var keysToPress = new List<Keys>();
+        if (key1 != Keys.None) keysToPress.Add(key1);
+        if (key2 != Keys.None) keysToPress.Add(key2);
+
+        // Удерживаем клавиши, пока игрок не приблизится к цели
+        while (distance > 0.5f)
+        {
+            foreach (var key in keysToPress)
+                await SyncInput.KeyDown(key);
+
+            await Task.Delay(50); // проверяем каждые 50ms
+
+            foreach (var key in keysToPress)
+                await SyncInput.KeyUp(key);
+
+            // Обновляем позицию игрока и расстояние
+            playerPos = _player.Position;
+            direction = targetPos - playerPos;
+            distance = direction.Length();
+        }
     }
 
     lastTargetPosition = _target.Pos;
     return true;
-}
-
-private static Keys[] GetMovementKeysForDirection(Vector3 direction)
-{
-    var keys = new System.Collections.Generic.List<Keys>();
-    float threshold = 0.3f;
-
-    if (direction.X > threshold)
-        keys.Add(Keys.D);
-    else if (direction.X < -threshold)
-        keys.Add(Keys.A);
-
-    if (direction.Y > threshold)
-        keys.Add(Keys.W);
-    else if (direction.Y < -threshold)
-        keys.Add(Keys.S);
-
-    return keys.ToArray();
 }
 }
