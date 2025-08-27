@@ -18,7 +18,6 @@ namespace Copilot.Settings
         public MovementMode MovementModeOption { get; set; } = MovementMode.Mouse;
 
         [Menu("Use Mouse to Follow", "Рекомендуется только для режима Mouse")]
-        [VisibleCondition(nameof(IsMouseMode))]
         public ToggleNode UseMouse { get; set; } = new ToggleNode(true);
 
         [Menu("Follow Key", "Клавиша для следования (если UseMouse=false)")]
@@ -33,8 +32,8 @@ namespace Copilot.Settings
         [Menu("Debug Mode", "Включает вывод отладочной информации")]
         public ToggleNode Debug { get; set; } = new ToggleNode(false);
 
-        // Метод для видимости UseMouse только в режиме Mouse
-        private bool IsMouseMode()
+        // Функция для проверки режима Mouse (можешь использовать в логике плагина)
+        public bool IsMouseMode()
         {
             return MovementModeOption == MovementMode.Mouse;
         }
