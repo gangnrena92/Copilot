@@ -3,34 +3,26 @@ using System.Linq;
 using System.Numerics;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
-using ExileCore2;
-using ExileCore2.PoEMemory.Elements;
+using ExileCore2.PoEMemory.MemoryObjects;
+using ExileCore2.Shared;
 
-using Copilot.Api;
 using Copilot.Settings;
+using Copilot.Api;
 using static Copilot.Copilot;
 
 namespace Copilot.CoRoutines
 {
-    internal static class FollowCoRoutine
+    internal class FollowCoRoutine
     {
         private static CopilotSettings Settings => Main.Settings;
-
+        private static LoggerPlus Log = new LoggerPlus("FollowCoRoutine");
         private static Vector3 lastTargetPosition = Vector3.Zero;
 
-        public static void Init()
-        {
-            Task.Run(FollowTask);
-        }
+        public static void Init() => TaskRunner.Run(Follow_Task, "FollowCoRoutine");
+        public static void Stop() => TaskRunner.Stop("FollowCoRoutine");
 
-        public static void Stop()
-        {
-            // ничего не делаем — Task завершится сама, когда условия не выполняются
-        }
-
-        private static async Task FollowTask()
+        private static async Task<bool> Follow_Task()
         {
             while (true)
             {
@@ -38,44 +30,48 @@ namespace Copilot.CoRoutines
 
                 try
                 {
-                    if (_player == null || State.IsLoading || Ui.ResurrectPanel.IsVisible || DontFollow || _target == null)
+                    if (_player == null || State.IsLoading || Ui.ResurrectPanel.IsVisible || Copilot.DontFollow) 
                         continue;
 
-                    var distance = Vector3.Distance(_player.Pos, _target.Pos);
-                    if (distance <= Settings.FollowDistance)
-                        continue;
+                    if (_target == null) continue;
+
+                    var distanceToTarget = Vector3.Distance(_player.Entity.Pos, _target.Entity.Pos);
+                    if (distanceToTarget <= Settings.FollowDistance) continue;
 
                     await MoveToward();
                 }
                 catch (Exception e)
                 {
-                    Main.Log.Message($"FollowCoRoutine error: {e}");
+                    Log.Error($"Error in Follow_Task: {e.Message}");
                 }
             }
         }
 
         private static async Task MoveToward()
         {
-            if (Settings.Additional.MovementMode == MovementMode.Mouse)
+            var additional = Settings.Additional;
+
+            if (additional.MovementModeOption == AdditionalSettings.MovementMode.Mouse)
             {
-                if (Settings.Additional.UseMouse)
+                if (additional.UseMouse)
                 {
-                    // ЛКМ к цели
-                    Input.SetCursorPos((int)_target.Pos.X, (int)_target.Pos.Y);
-                    Input.LeftClick();
+                    // Наведение мыши и клик
+                    var targetPos = _target.Entity.Pos;
+                    GameController.Mouse.MoveCursor(targetPos.X, targetPos.Y);
+                    GameController.Mouse.LeftClick();
                 }
                 else
                 {
-                    // Нажимаем FollowKey
-                    Input.KeyDown(Settings.Additional.FollowKey);
+                    // Следование через клавишу FollowKey
+                    GameController.Keyboard.KeyDown(additional.FollowKey.Value);
                     await Task.Delay(50);
-                    Input.KeyUp(Settings.Additional.FollowKey);
+                    GameController.Keyboard.KeyUp(additional.FollowKey.Value);
                 }
             }
-            else if (Settings.Additional.MovementMode == MovementMode.WASD)
+            else if (additional.MovementModeOption == AdditionalSettings.MovementMode.WASD)
             {
-                Vector3 playerPos = _player.Pos;
-                Vector3 targetPos = _target.Pos;
+                Vector3 playerPos = _player.Entity.Pos;
+                Vector3 targetPos = _target.Entity.Pos;
 
                 Vector3 direction = targetPos - playerPos;
                 float distance = direction.Length();
@@ -84,39 +80,35 @@ namespace Copilot.CoRoutines
 
                 double angle = Math.Atan2(direction.Y, direction.X) * (180 / Math.PI);
 
-                Keys key1 = Keys.None;
-                Keys key2 = Keys.None;
+                List<ExileCore2.Shared.Enums.Keys> keysToPress = new List<ExileCore2.Shared.Enums.Keys>();
 
-                if (angle >= -22.5 && angle < 22.5) key1 = Keys.D;                  // E
-                else if (angle >= 22.5 && angle < 67.5) { key1 = Keys.W; key2 = Keys.D; }  // NE
-                else if (angle >= 67.5 && angle < 112.5) key1 = Keys.W;             // N
-                else if (angle >= 112.5 && angle < 157.5) { key1 = Keys.W; key2 = Keys.A; } // NW
-                else if (angle >= 157.5 || angle < -157.5) key1 = Keys.A;           // W
-                else if (angle >= -157.5 && angle < -112.5) { key1 = Keys.S; key2 = Keys.A; } // SW
-                else if (angle >= -112.5 && angle < -67.5) key1 = Keys.S;           // S
-                else if (angle >= -67.5 && angle < -22.5) { key1 = Keys.S; key2 = Keys.D; } // SE
+                if (angle >= -22.5 && angle < 22.5) keysToPress.Add(ExileCore2.Shared.Enums.Keys.D);
+                else if (angle >= 22.5 && angle < 67.5) { keysToPress.Add(ExileCore2.Shared.Enums.Keys.W); keysToPress.Add(ExileCore2.Shared.Enums.Keys.D); }
+                else if (angle >= 67.5 && angle < 112.5) keysToPress.Add(ExileCore2.Shared.Enums.Keys.W);
+                else if (angle >= 112.5 && angle < 157.5) { keysToPress.Add(ExileCore2.Shared.Enums.Keys.W); keysToPress.Add(ExileCore2.Shared.Enums.Keys.A); }
+                else if (angle >= 157.5 || angle < -157.5) keysToPress.Add(ExileCore2.Shared.Enums.Keys.A);
+                else if (angle >= -157.5 && angle < -112.5) { keysToPress.Add(ExileCore2.Shared.Enums.Keys.S); keysToPress.Add(ExileCore2.Shared.Enums.Keys.A); }
+                else if (angle >= -112.5 && angle < -67.5) keysToPress.Add(ExileCore2.Shared.Enums.Keys.S);
+                else if (angle >= -67.5 && angle < -22.5) { keysToPress.Add(ExileCore2.Shared.Enums.Keys.S); keysToPress.Add(ExileCore2.Shared.Enums.Keys.D); }
 
-                List<Keys> keysToPress = new List<Keys>();
-                if (key1 != Keys.None) keysToPress.Add(key1);
-                if (key2 != Keys.None) keysToPress.Add(key2);
-
+                // Удерживаем клавиши до приближения к цели
                 while (distance > 0.5f)
                 {
                     foreach (var key in keysToPress)
-                        Input.SetKeyState(key, true);
+                        GameController.Keyboard.KeyDown(key);
 
                     await Task.Delay(50);
 
                     foreach (var key in keysToPress)
-                        Input.SetKeyState(key, false);
+                        GameController.Keyboard.KeyUp(key);
 
-                    playerPos = _player.Pos;
+                    playerPos = _player.Entity.Pos;
                     direction = targetPos - playerPos;
                     distance = direction.Length();
                 }
             }
 
-            lastTargetPosition = _target.Pos;
+            lastTargetPosition = _target.Entity.Pos;
         }
     }
 }

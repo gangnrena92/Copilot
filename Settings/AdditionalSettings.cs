@@ -32,7 +32,6 @@ namespace Copilot.Settings
         [Menu("Debug Mode", "Включает вывод отладочной информации")]
         public ToggleNode Debug { get; set; } = new ToggleNode(false);
 
-        // Функция для проверки режима Mouse (можешь использовать в логике плагина)
         public bool IsMouseMode()
         {
             return MovementModeOption == MovementMode.Mouse;
